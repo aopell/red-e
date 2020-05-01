@@ -3,8 +3,8 @@ using EBot.Commands;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using ReactionAction = System.Func<EBot.Helpers.ReactionMessage, System.Threading.Tasks.Task>;
-using CustomReactionAction = System.Func<EBot.Helpers.ReactionMessage, string, System.Threading.Tasks.Task>;
+using ReactionAction = System.Func<EBot.Helpers.ReactionMessage, Discord.WebSocket.SocketReaction, System.Threading.Tasks.Task>;
+using CustomReactionAction = System.Func<EBot.Helpers.ReactionMessage, Discord.WebSocket.SocketReaction, System.Threading.Tasks.Task>;
 using PageAction = System.Func<EBot.Helpers.PaginatedMessage, System.Threading.Tasks.Task<(string, Discord.Embed)>>;
 using Discord.WebSocket;
 using System.Threading.Tasks;
@@ -26,29 +26,25 @@ namespace EBot.Helpers
             ReactionMessageCache.Add(message.Id.ToString(), paginatedMessage, new CacheItemPolicy { SlidingExpiration = TimeSpan.FromMilliseconds(timeout), RemovedCallback = onTimeout == null ? null : (CacheEntryRemovedCallback)(_ => onTimeout()) });
         }
 
-        public static void CreateCustomReactionMessage(BotCommandContext context, IUserMessage message, CustomReactionAction defaultAction, bool allowMultipleReactions = false, int timeout = 300000, Action onTimeout = null)
+        public static void CreateCustomReactionMessage(BotCommandContext context, IUserMessage message, CustomReactionAction defaultAction, bool allowMultipleReactions = false, bool anyoneCanInteract = false, int timeout = 300000, Action onTimeout = null)
         {
-            var reactionMessage = new ReactionMessage(context, message, defaultAction, allowMultipleReactions);
+            var reactionMessage = new ReactionMessage(context, message, defaultAction, allowMultipleReactions, anyoneCanInteract);
             ReactionMessageCache.Add(message.Id.ToString(), reactionMessage, new CacheItemPolicy { SlidingExpiration = TimeSpan.FromMilliseconds(timeout), RemovedCallback = onTimeout == null ? null : (CacheEntryRemovedCallback)(_ => onTimeout()) });
         }
 
         public static void CreateConfirmReactionMessage(BotCommandContext context, IUserMessage message, ReactionAction onPositiveResponse, ReactionAction onNegativeResponse, bool allowMultipleReactions = false, int timeout = 300000, Action onTimeout = null)
         {
-            CreateReactionMessage(context, message, new Dictionary<string, ReactionAction>
+            CreateReactionMessage(context, message, new List<(string, ReactionAction)>
             {
-                ["✅"] = onPositiveResponse,
-                ["❌"] = onNegativeResponse
-            }, allowMultipleReactions, timeout, onTimeout);
+                ("✅", onPositiveResponse),
+                ("❌",  onNegativeResponse)
+            }, allowMultipleReactions, false, timeout, onTimeout);
         }
 
-        public static void CreateReactionMessage(BotCommandContext context, IUserMessage message, Dictionary<string, ReactionAction> actions, bool allowMultipleReactions = false, int timeout = 300000, Action onTimeout = null)
+        public static void CreateReactionMessage(BotCommandContext context, IUserMessage message, List<(string e, ReactionAction a)> actions, bool allowMultipleReactions = false, bool anyoneCanInteract = false, int timeout = 300000, Action onTimeout = null)
         {
-            foreach (string e in actions.Keys)
-            {
-                message.AddReactionAsync(Emote.TryParse(e, out Emote emote) ? emote : (IEmote)new Emoji(e));
-            }
-
-            var reactionMessage = new ReactionMessage(context, message, actions, allowMultipleReactions);
+            message.AddReactionsAsync(actions.Select(x => Emote.TryParse(x.e, out Emote emote) ? emote : (IEmote)new Emoji(x.e)).ToArray());
+            var reactionMessage = new ReactionMessage(context, message, actions, allowMultipleReactions, anyoneCanInteract);
             ReactionMessageCache.Add(message.Id.ToString(), reactionMessage, new CacheItemPolicy { SlidingExpiration = TimeSpan.FromMilliseconds(timeout), RemovedCallback = onTimeout == null ? null : (CacheEntryRemovedCallback)(_ => onTimeout()) });
         }
 
@@ -69,11 +65,11 @@ namespace EBot.Helpers
             if (message.Author.Id == botUser.Id && reaction.UserId != botUser.Id)
             {
                 var reactionMessage = GetReactionMessageById(message.Id);
-                if (reactionMessage != null && reaction.UserId == reactionMessage.Context.User.Id && (reactionMessage.AcceptsAllReactions || reactionMessage.AcceptedReactions.Contains(reaction.Emote.ToString())))
+                if (reactionMessage != null && (reactionMessage.AnyoneCanInteract || reaction.UserId == reactionMessage.Context.User.Id) && (reactionMessage.AcceptsAllReactions || reactionMessage.AcceptedReactions.Contains(reaction.Emote.ToString())))
                 {
                     try
                     {
-                        await reactionMessage.RunAction(reaction.Emote);
+                        await reactionMessage.RunAction(reaction);
                     }
                     catch (Exception ex)
                     {
@@ -82,7 +78,7 @@ namespace EBot.Helpers
 
                     if (reactionMessage.AllowMultipleReactions)
                     {
-                        await message.RemoveReactionAsync(reaction.Emote, reactionMessage.Context.User);
+                        await message.RemoveReactionAsync(reaction.Emote, reaction.UserId);
                     }
                     else
                     {
@@ -104,38 +100,45 @@ namespace EBot.Helpers
         public IUserMessage Message { get; }
         public bool AllowMultipleReactions { get; }
         public bool AcceptsAllReactions { get; }
-        public virtual IEnumerable<string> AcceptedReactions => Actions.Keys;
+        public bool AnyoneCanInteract { get; }
+        public virtual IEnumerable<string> AcceptedReactions => Actions.Select(x => x.emoji);
         protected CustomReactionAction DefaultAction { get; }
-        protected Dictionary<string, ReactionAction> Actions { get; }
+        protected List<(string emoji, ReactionAction action)> Actions { get; }
 
-        public ReactionMessage(BotCommandContext context, IUserMessage message, CustomReactionAction defaultAction, bool allowMultipleReactions = false)
+        public ReactionMessage(BotCommandContext context, IUserMessage message, CustomReactionAction defaultAction, bool allowMultipleReactions = false, bool anyoneCanInteract = false)
         {
             Context = context;
             Message = message;
             DefaultAction = defaultAction;
             AllowMultipleReactions = allowMultipleReactions;
             AcceptsAllReactions = true;
+            AnyoneCanInteract = anyoneCanInteract;
         }
 
-        public ReactionMessage(BotCommandContext context, IUserMessage message, Dictionary<string, ReactionAction> actions, bool allowMultipleReactions = false)
+        public ReactionMessage(BotCommandContext context, IUserMessage message, List<(string, ReactionAction)> actions, bool allowMultipleReactions = false, bool anyoneCanInteract = false)
         {
             Context = context;
             Message = message;
             Actions = actions;
             AllowMultipleReactions = allowMultipleReactions;
             AcceptsAllReactions = false;
+            AnyoneCanInteract = anyoneCanInteract;
         }
 
-        public virtual async Task RunAction(IEmote reaction)
+        public virtual async Task RunAction(SocketReaction reaction)
         {
-            string text = reaction.ToString();
+            string text = reaction.Emote.ToString();
             if (AcceptsAllReactions)
             {
-                await DefaultAction(this, text);
+                await DefaultAction(this, reaction);
             }
-            else if (Actions.ContainsKey(text))
+            else
             {
-                await Actions[text](this);
+                var emojiAction = Actions.FirstOrDefault(x => x.emoji == text);
+                if (emojiAction != default)
+                {
+                    await emojiAction.action(this, reaction);
+                }
             }
         }
     }
@@ -152,7 +155,7 @@ namespace EBot.Helpers
         public PageAction OnChage { get; }
         public override IEnumerable<string> AcceptedReactions => new[] { FirstPage, LastPage, PreviousPage, NextPage };
 
-        public PaginatedMessage(BotCommandContext context, IUserMessage message, int count, int initial, PageAction action) : base(context, message, new Dictionary<string, ReactionAction>(), true)
+        public PaginatedMessage(BotCommandContext context, IUserMessage message, int count, int initial, PageAction action) : base(context, message, new List<(string, ReactionAction)>(), true)
         {
             if (count < 1) throw new ArgumentOutOfRangeException(nameof(count));
             if (initial < 1 || initial > count) throw new ArgumentOutOfRangeException(nameof(initial));
@@ -162,7 +165,7 @@ namespace EBot.Helpers
             OnChage = action;
         }
 
-        public override async Task RunAction(IEmote reaction)
+        public override async Task RunAction(SocketReaction reaction)
         {
             switch (reaction.ToString())
             {

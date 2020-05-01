@@ -31,6 +31,9 @@ namespace EBot
             MainInstance.Client.Log += MainInstance.Log;
             MainInstance.Client.Ready += MainInstance.Client_Ready;
             MainInstance.Client.ReactionAdded += MainInstance.Client_ReactionAdded;
+            MainInstance.Client.UserVoiceStateUpdated += EMessageHelper.UserVoiceStateUpdated;
+            MainInstance.Client.MessageReceived += EMessageHelper.MessageRecevied;
+
 
             await MainInstance.Client.LoginAsync(TokenType.Bot, MainInstance.Secret.Token);
             await MainInstance.Client.StartAsync();
@@ -54,13 +57,23 @@ namespace EBot
 
         private Task Client_Ready()
         {
+            MinuteTimer();
             return Task.CompletedTask;
         }
 
-        private Task Log(LogMessage arg)
+        public Task Log(LogMessage arg)
         {
             Console.WriteLine(arg.ToString());
             return Task.CompletedTask;
+        }
+
+        private async Task MinuteTimer()
+        {
+            while (true)
+            {
+                await EMessageHelper.UpdateEMessages();
+                await Task.Delay(TimeSpan.FromMinutes(1));
+            }
         }
 
         private async Task Client_ReactionAdded(Cacheable<IUserMessage, ulong> cachedMessage, ISocketMessageChannel channel, SocketReaction reaction)
