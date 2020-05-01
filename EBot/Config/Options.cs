@@ -7,6 +7,8 @@ namespace EBot.Config
     [ConfigFile("Config/options.json")]
     public class Options : Config
     {
-
+        public List<ulong> DefaultUsers { get; set; }
+        public ulong VoiceWaitingRoomId { get; set; }
+        public ulong VoiceTargetRoomId { get; set; }
     }
 }

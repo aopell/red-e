@@ -11,6 +11,7 @@ using System.Linq;
 using EBot;
 using EBot.Commands;
 using EBot.Helpers;
+using System.Text.RegularExpressions;
 
 namespace Ebot.Commands
 {
@@ -53,7 +54,7 @@ namespace Ebot.Commands
             int argPos = 0;
 
             // Determine if the message is a command based on the prefix and make sure no bots trigger commands
-            if (!(message.HasCharPrefix('+', ref argPos) ||
+            if (!(message.HasCharPrefix('-', ref argPos) ||
                 message.HasMentionPrefix(client.CurrentUser, ref argPos)) ||
                 message.Author.IsBot)
                 return;
@@ -66,6 +67,7 @@ namespace Ebot.Commands
 
             // Keep in mind that result does not indicate a return value
             // rather an object stating if the command executed successfully.
+
             var result = await commands.ExecuteAsync(
                 context: context,
                 argPos: argPos,

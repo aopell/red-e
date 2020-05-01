@@ -12,10 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Models\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="Config\options.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
