@@ -1,0 +1,77 @@
+grammar E
+{
+  options
+  {
+    Axiom = "prompt"; // the top variable for this grammar
+    Separator = "SEPARATOR"; // the terminal that represent white space
+  }
+  terminals
+  {
+    WHITE_SPACE -> U+0020 | U+0009 | U+000B | U+000C ;
+    SEPARATOR   -> WHITE_SPACE+;
+
+    E -> ('E' | 'e')+;
+
+    DIGIT -> [0 9];
+    NONZERO -> [1 9];
+    INTEGER -> [1 9] [0 9]*;
+
+    HOUR -> '1' DIGIT | NONZERO;
+    MINUTE -> [0 5] DIGIT;
+
+    YFINAL -> 'y' | E;
+
+    NUMBER -> 'one' | 'two' | 'three' | 'four' | 'five' | 'six' | 'seven' | 'eight' | 'nine' | 'ten' | 'twent' YFINAL | 'thirt' YFINAL;
+    TEXTTIME -> 'one' | 'two' | 'three' | 'four' | 'five' | 'six' | 'seven' | 'eight' | 'nine' | 'ten' | 'eleven' | 'twelve' | 'noon' | 'midnight';
+  
+    N -> NUMBER | INTEGER;
+
+    AT_OR_BEFORE -> 'at' | 'before';
+
+    WITHIN -> ' ' 'with'? ' in' | 'n';
+    IN -> ' in' | 'n';
+
+    LIKE -> ' like ' | ' ';
+
+    EVENTUALLY -> E 'v' E 'ntual' 'l'? YFINAL;
+
+    TONIGHT -> ' ' ('tonight' | 'later' | EVENTUALLY);
+    
+    SOON -> 'so' 'o'* 'on';
+    SOONISH -> SOON 'ish';
+
+    MIN -> 'min' 'ute'?;
+    MINS -> 'min' ('utes' | 's'?);
+
+    AMINUTE -> 'a ' MIN;
+    ANHOUR -> 'an ' ('hr' | 'hour');
+
+    RANGE -> '-' | ' to ';
+  }
+  rules
+  { 
+    time -> TEXTTIME | HOUR (':' MINUTE)?;
+    atrange -> time RANGE time;
+
+    at -> ' ' AT_OR_BEFORE LIKE (time | atrange);
+
+    nrange -> N  N;
+    nminutes -> ' ' MINS | ;
+    nhours -> ('hr' | ' hour') 's'?;
+    n -> (nrange | N) (nhours | nminutes);
+    a -> AMINUTE | ANHOUR;
+
+    in -> IN LIKE (n | a);
+
+    soon -> SOON;
+    soon -> IN 'a ' ('bit' | 'couple' (' ' 'of '? MINS)? | 'few' (' ' MINS)?);
+
+    soonish -> ' ' SOONISH | IN ' a while';
+    
+    now -> ' now'? | 'mm' E 'd' ('i' | E) 'atel' YFINAL;
+
+    tonight -> ' '? EVENTUALLY | ' tonight' | ' later';
+    
+    prompt -> E (at | in | soon | soonish | tonight | now) '?';
+  }
+}
