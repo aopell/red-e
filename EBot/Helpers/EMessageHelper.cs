@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Rest;
 using Discord.WebSocket;
+using Hime.Redist;
 using EBot.Commands;
 using EBot.Models;
 using System;
@@ -12,24 +13,23 @@ using System.Runtime.Caching;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using E;
 
 namespace EBot.Helpers
 {
     public static class EMessageHelper
     {
-        // Regex: https://regex101.com/r/XTJXj4/3/
-        public const string EMessageRegexString = @"\be+(\s+((like\s+)?(?<immediate>now)|(like\s+)?(?<eventual>soon|eventual(ly|e+)|tonight|at some point|later|in (a bit|a few( (min(ute)?s))?|a while))|((with)?in(\s+like)?\s+((?<number>\d+|a|an|one|two|three|four|five|ten)(\s+(?<unit>hour|min(ute)?)s?)?))|((at|before)(\s+like)?\s+((?<hour>one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|noon|midnight|\d|1[012])(:(?<minute>[0-5]\d))?))))?(?<ignore_end>-\d+)?\?";
-        private static readonly Regex EMessageRegex = new Regex(EMessageRegexString);
-
         private static Dictionary<ulong, EMessage> EMessages = new Dictionary<ulong, EMessage>();
 
         public static async Task MessageRecevied(SocketMessage msg)
         {
             if (msg.Author.IsBot || !(msg is SocketUserMessage message)) return;
 
-            var match = EMessageRegex.Match(message.Content);
+            var parse = new EParser(new ELexer(msg.Content)).Parse();
 
-            await HandleEMessage(message, match.Success ? match.Groups : null);
+            if (!parse.IsSuccess) return;
+
+            await HandleEMessage(message, parse.Root);
         }
 
         public static async Task UserVoiceStateUpdated(SocketUser user, SocketVoiceState prev, SocketVoiceState curr)
@@ -47,10 +47,8 @@ namespace EBot.Helpers
             }
         }
 
-        private static async Task HandleEMessage(SocketUserMessage message, GroupCollection groups)
+        private static async Task HandleEMessage(SocketUserMessage message, ASTNode root)
         {
-            if (groups == null) return;
-
             var context = new BotCommandContext(DiscordBot.MainInstance.Client, message, DiscordBot.MainInstance);
 
             await CreateEMessage(context);
@@ -197,6 +195,67 @@ namespace EBot.Helpers
                 }
 
                 return $"{(late ? "⏰" : "⌛")} {(span.TotalHours >= 1 ? $"{(int)span.TotalHours} hour{(span.TotalHours >= 2 ? "s" : "")} " : "")}{span.Minutes} min{(span.Minutes != 1 ? "s" : "")}{(late ? " late" : "")}";
+            }
+        }
+    }
+
+    public class EWalker
+    {
+        public DateTime Read(ASTNode node)
+        {
+            switch (node.Symbol.ID)
+            {
+                case EParser.ID.VariableTime: return ReadTime(node);
+            }
+
+            return DateTime.MinValue;
+        }
+
+        public DateTime ReadTime(ASTNode node)
+        {
+            var children = node.Children;
+
+            var time = children.First();
+
+            TimeSpan ampm;
+            if (DateTime.Now.Hour < 12) ampm = new TimeSpan(0, 0, 0);
+            else ampm = new TimeSpan(12, 0, 0);
+
+            if (time.Symbol.ID == ELexer.ID.TerminalTexttime)
+            {
+                return DateTime.Today + ampm + TexttimeOffset(time.Value);
+            }
+            else
+            {
+                var minute = 0;
+
+                if (children.Count == 2) Int32.Parse(children.ElementAt(1).Value);
+
+                var hour = Int32.Parse(time.Value);
+
+                return DateTime.Today + ampm + new TimeSpan(hour, minute, 0);
+            }
+        }
+
+        public TimeSpan TexttimeOffset(string texttime)
+        {
+            switch (texttime)
+            {
+                case "one": return new TimeSpan(1, 0, 0);
+                case "two": return new TimeSpan(2, 0, 0);
+                case "three": return new TimeSpan(3, 0, 0);
+                case "four": return new TimeSpan(4, 0, 0);
+                case "five": return new TimeSpan(5, 0, 0);
+                case "six": return new TimeSpan(6, 0, 0);
+                case "seven": return new TimeSpan(7, 0, 0);
+                case "eight": return new TimeSpan(8, 0, 0);
+                case "nine": return new TimeSpan(9, 0, 0);
+                case "ten": return new TimeSpan(10, 0, 0);
+                case "eleven": return new TimeSpan(11, 0, 0);
+                case "twelve":
+                case "noon":
+                case "midnight": return new TimeSpan(12, 0, 0);
+                default: return new TimeSpan(-1, 0, 0);
             }
         }
     }

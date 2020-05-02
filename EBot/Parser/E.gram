@@ -1,0 +1,82 @@
+grammar E
+{
+  options
+  {
+    Axiom = "prompt"; // the top variable for this grammar
+    Separator = "SEPARATOR"; // the terminal that represent white space
+  }
+  terminals
+  {
+    fragment MSG -> .* ' ';
+    WHITE_SPACE -> U+0020 | U+0009 | U+000B | U+000C | ' ';
+    SEPARATOR   -> WHITE_SPACE+;
+
+    YFINAL -> 'y' | 'e'+;
+
+    context in {    
+      WITHIN -> ' ' 'with'? 'in' | 'n';
+    }
+
+    context like { LIKE -> ' like ' | ' mayb' 'e'+ ' ' | ' '; }
+
+    TONIGHT -> ' tonight' | ' later' | (' ' 'e'+)? 'ventual' 'l'? YFINAL;
+
+    context min {
+      MINS -> ' min' ('utes' | 's'?);
+    }
+    
+    context soon {
+      INSOON -> 'a ' [^?]+;
+      INSOONISH -> 'a while';
+      SOON -> ' so' 'o'* 'on';
+      SOONISH -> SOON 'ish';
+    }
+
+    context at { AT_OR_BEFORE -> ' at' | ' before'; }
+
+    context one {
+      AMINUTE -> 'a min' 'ute'?;
+      ANHOUR -> 'an ' ('hr' | 'hour');
+    }
+
+    context range {
+      RANGE -> '-' | ' - ' | ' to ';
+    }
+
+    INTEGER -> [1-9] [0-9]*;
+
+    NUMBER -> 'one' | 'two' | 'three' | 'four' | 'five' | 'six' | 'seven' | 'eight' | 'nine' | 'ten' | 'twenty' | 'thirty';
+
+    context time {
+      MINUTE -> [0-5] [0-9];
+      TEXTTIME -> 'one' | 'two' | 'three' | 'four' | 'five' | 'six' | 'seven' | 'eight' | 'nine' | 'ten' | 'eleven' | 'twelve' | 'noon' | 'midnight';
+      HOUR -> '1' [0-2] | [1-9];
+    }
+
+    context start {
+      E -> MSG? ('e' | 'E')+;
+    }
+  }
+  rules
+  { 
+    now -> #like { LIKE! } 'now'! | ;
+
+    nn -> (NUMBER | INTEGER)^;
+
+    nminutes -> #min { MINS! } | ;
+    nhours -> ('hr'! | ' hour'!) 's'!?;
+    n -> (nn! #range { RANGE! })? nn (nhours | nminutes);
+    a -> #one { AMINUTE | ANHOUR };
+
+    in -> #in { WITHIN! } #like { LIKE! } (n | a | #soon { INSOON } | INSOONISH);
+
+    soon -> #soon { SOON! };
+
+    soonish -> #soon { SOONISH! };
+  
+    time -> #time { TEXTTIME | HOUR (':'! MINUTE)? };
+    at -> #at { AT_OR_BEFORE! } #like { LIKE! } (time! #range { RANGE! })? time^;
+    
+    prompt -> #start { E! } (at | in | soon | soonish | TONIGHT | now)^ ' '!? '?'!+;
+  }
+}
