@@ -26,7 +26,8 @@ grammar E
     }
     
     context soon {
-      OTHERSOON -> 'a ' [^?]+;
+      INSOON -> 'a ' [^?]+;
+      INSOONISH -> 'a while';
       SOON -> ' so' 'o'* 'on';
       SOONISH -> SOON 'ish';
     }
@@ -58,19 +59,16 @@ grammar E
   }
   rules
   { 
-    now -> #like { LIKE! } 'now' | ;
+    now -> #like { LIKE! } 'now'! | ;
 
-    nn -> NUMBER | INTEGER;
+    nn -> (NUMBER | INTEGER)^;
 
     nminutes -> #min { MINS! } | ;
     nhours -> ('hr'! | ' hour'!) 's'!?;
     n -> (nn! #range { RANGE! })? nn (nhours | nminutes);
     a -> #one { AMINUTE | ANHOUR };
 
-    intime -> n | a;
-    insoon -> #soon { OTHERSOON! };
-
-    in -> #in { WITHIN! } #like { LIKE! } (intime | insoon);
+    in -> #in { WITHIN! } #like { LIKE! } (n | a | #soon { INSOON } | INSOONISH);
 
     soon -> #soon { SOON! };
 
@@ -82,18 +80,3 @@ grammar E
     prompt -> #start { E! } (at | in | soon | soonish | TONIGHT | now)^ ' '!? '?'!+;
   }
 }
-
-"one"
-"two"
-"three"
-"four"
-"five"
-"six"
-"seven"
-"eight"
-"nine"
-"ten"
-"eleve"
-"twelv"
-"noon"
-"midnight"

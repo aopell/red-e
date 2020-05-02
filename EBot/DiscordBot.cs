@@ -80,7 +80,8 @@ namespace EBot
                 "any of yall motherfuckers actually want to e?",
                 "how about eeeeen like 20?",
                 "y'all want to play something eeeeventualleeee?",
-                "can anyone e at maybe 9-9:30???"
+                "can anyone e at maybe 9-9:30???",
+                "anyone eeen maybe a while?",
             };
 
             foreach (var s in test)
