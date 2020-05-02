@@ -120,7 +120,7 @@ namespace EBot.Helpers
 
                 await UpdateEMessage(id, emessage);
 
-                if (DateTimeOffset.Now - EMessages[id].CreatedTimestamp > TimeSpan.FromHours(24))
+                if (DateTimeOffset.Now - EMessages[id].CreatedTimestamp > TimeSpan.FromHours(12))
                 {
                     EMessages.Remove(id);
                 }
