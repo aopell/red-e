@@ -7,71 +7,93 @@ grammar E
   }
   terminals
   {
-    WHITE_SPACE -> U+0020 | U+0009 | U+000B | U+000C ;
+    fragment MSG -> .* ' ';
+    WHITE_SPACE -> U+0020 | U+0009 | U+000B | U+000C | ' ';
     SEPARATOR   -> WHITE_SPACE+;
 
-    E -> ('E' | 'e')+;
+    YFINAL -> 'y' | 'e'+;
 
-    DIGIT -> [0 9];
-    NONZERO -> [1 9];
-    INTEGER -> [1 9] [0 9]*;
+    context in {    
+      WITHIN -> ' ' 'with'? 'in' | 'n';
+    }
 
-    HOUR -> '1' DIGIT | NONZERO;
-    MINUTE -> [0 5] DIGIT;
+    context like { LIKE -> ' like ' | ' mayb' 'e'+ ' ' | ' '; }
 
-    YFINAL -> 'y' | E;
+    TONIGHT -> ' tonight' | ' later' | (' ' 'e'+)? 'ventual' 'l'? YFINAL;
 
-    NUMBER -> 'one' | 'two' | 'three' | 'four' | 'five' | 'six' | 'seven' | 'eight' | 'nine' | 'ten' | 'twent' YFINAL | 'thirt' YFINAL;
-    TEXTTIME -> 'one' | 'two' | 'three' | 'four' | 'five' | 'six' | 'seven' | 'eight' | 'nine' | 'ten' | 'eleven' | 'twelve' | 'noon' | 'midnight';
-  
-    N -> NUMBER | INTEGER;
-
-    AT_OR_BEFORE -> 'at' | 'before';
-
-    WITHIN -> ' ' 'with'? ' in' | 'n';
-    IN -> ' in' | 'n';
-
-    LIKE -> ' like ' | ' ';
-
-    EVENTUALLY -> E 'v' E 'ntual' 'l'? YFINAL;
-
-    TONIGHT -> ' ' ('tonight' | 'later' | EVENTUALLY);
+    context min {
+      MINS -> ' min' ('utes' | 's'?);
+    }
     
-    SOON -> 'so' 'o'* 'on';
-    SOONISH -> SOON 'ish';
+    context soon {
+      OTHERSOON -> 'a ' [^?]+;
+      SOON -> ' so' 'o'* 'on';
+      SOONISH -> SOON 'ish';
+    }
 
-    MIN -> 'min' 'ute'?;
-    MINS -> 'min' ('utes' | 's'?);
+    context at { AT_OR_BEFORE -> ' at' | ' before'; }
 
-    AMINUTE -> 'a ' MIN;
-    ANHOUR -> 'an ' ('hr' | 'hour');
+    context one {
+      AMINUTE -> 'a min' 'ute'?;
+      ANHOUR -> 'an ' ('hr' | 'hour');
+    }
 
-    RANGE -> '-' | ' to ';
+    context range {
+      RANGE -> '-' | ' - ' | ' to ';
+    }
+
+    INTEGER -> [1-9] [0-9]*;
+
+    NUMBER -> 'one' | 'two' | 'three' | 'four' | 'five' | 'six' | 'seven' | 'eight' | 'nine' | 'ten' | 'twenty' | 'thirty';
+
+    context time {
+      MINUTE -> [0-5] [0-9];
+      TEXTTIME -> 'one' | 'two' | 'three' | 'four' | 'five' | 'six' | 'seven' | 'eight' | 'nine' | 'ten' | 'eleven' | 'twelve' | 'noon' | 'midnight';
+      HOUR -> '1' [0-2] | [1-9];
+    }
+
+    context start {
+      E -> MSG? ('e' | 'E')+;
+    }
   }
   rules
   { 
-    time -> TEXTTIME | HOUR (':' MINUTE)?;
-    atrange -> time RANGE time;
+    now -> #like { LIKE! } 'now' | ;
 
-    at -> ' ' AT_OR_BEFORE LIKE (time | atrange);
+    nn -> NUMBER | INTEGER;
 
-    nrange -> N  N;
-    nminutes -> ' ' MINS | ;
-    nhours -> ('hr' | ' hour') 's'?;
-    n -> (nrange | N) (nhours | nminutes);
-    a -> AMINUTE | ANHOUR;
+    nminutes -> #min { MINS! } | ;
+    nhours -> ('hr'! | ' hour'!) 's'!?;
+    n -> (nn! #range { RANGE! })? nn (nhours | nminutes);
+    a -> #one { AMINUTE | ANHOUR };
 
-    in -> IN LIKE (n | a);
+    intime -> n | a;
+    insoon -> #soon { OTHERSOON! };
 
-    soon -> SOON;
-    soon -> IN 'a ' ('bit' | 'couple' (' ' 'of '? MINS)? | 'few' (' ' MINS)?);
+    in -> #in { WITHIN! } #like { LIKE! } (intime | insoon);
 
-    soonish -> ' ' SOONISH | IN ' a while';
+    soon -> #soon { SOON! };
+
+    soonish -> #soon { SOONISH! };
+  
+    time -> #time { TEXTTIME | HOUR (':'! MINUTE)? };
+    at -> #at { AT_OR_BEFORE! } #like { LIKE! } (time! #range { RANGE! })? time^;
     
-    now -> ' now'? | 'mm' E 'd' ('i' | E) 'atel' YFINAL;
-
-    tonight -> ' '? EVENTUALLY | ' tonight' | ' later';
-    
-    prompt -> E (at | in | soon | soonish | tonight | now) '?';
+    prompt -> #start { E! } (at | in | soon | soonish | TONIGHT | now)^ ' '!? '?'!+;
   }
 }
+
+"one"
+"two"
+"three"
+"four"
+"five"
+"six"
+"seven"
+"eight"
+"nine"
+"ten"
+"eleve"
+"twelv"
+"noon"
+"midnight"

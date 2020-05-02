@@ -23,61 +23,61 @@ namespace E
 		public class ID
 		{
 			/// <summary>
-			/// The unique identifier for variable time
+			/// The unique identifier for variable now
 			/// </summary>
-			public const int VariableTime = 0x001C;
+			public const int VariableNow = 0x0018;
 			/// <summary>
-			/// The unique identifier for variable atrange
+			/// The unique identifier for variable nn
 			/// </summary>
-			public const int VariableAtrange = 0x001D;
-			/// <summary>
-			/// The unique identifier for variable at
-			/// </summary>
-			public const int VariableAt = 0x001E;
-			/// <summary>
-			/// The unique identifier for variable nrange
-			/// </summary>
-			public const int VariableNrange = 0x001F;
+			public const int VariableNn = 0x0019;
 			/// <summary>
 			/// The unique identifier for variable nminutes
 			/// </summary>
-			public const int VariableNminutes = 0x0020;
+			public const int VariableNminutes = 0x001A;
 			/// <summary>
 			/// The unique identifier for variable nhours
 			/// </summary>
-			public const int VariableNhours = 0x0021;
+			public const int VariableNhours = 0x001B;
 			/// <summary>
 			/// The unique identifier for variable n
 			/// </summary>
-			public const int VariableN = 0x0022;
+			public const int VariableN = 0x001C;
 			/// <summary>
 			/// The unique identifier for variable a
 			/// </summary>
-			public const int VariableA = 0x0023;
+			public const int VariableA = 0x001D;
+			/// <summary>
+			/// The unique identifier for variable intime
+			/// </summary>
+			public const int VariableIntime = 0x001E;
+			/// <summary>
+			/// The unique identifier for variable insoon
+			/// </summary>
+			public const int VariableInsoon = 0x001F;
 			/// <summary>
 			/// The unique identifier for variable in
 			/// </summary>
-			public const int VariableIn = 0x0024;
+			public const int VariableIn = 0x0020;
 			/// <summary>
 			/// The unique identifier for variable soon
 			/// </summary>
-			public const int VariableSoon = 0x0025;
+			public const int VariableSoon = 0x0021;
 			/// <summary>
 			/// The unique identifier for variable soonish
 			/// </summary>
-			public const int VariableSoonish = 0x0026;
+			public const int VariableSoonish = 0x0022;
 			/// <summary>
-			/// The unique identifier for variable now
+			/// The unique identifier for variable time
 			/// </summary>
-			public const int VariableNow = 0x0027;
+			public const int VariableTime = 0x0023;
 			/// <summary>
-			/// The unique identifier for variable tonight
+			/// The unique identifier for variable at
 			/// </summary>
-			public const int VariableTonight = 0x0028;
+			public const int VariableAt = 0x0024;
 			/// <summary>
 			/// The unique identifier for variable prompt
 			/// </summary>
-			public const int VariablePrompt = 0x0029;
+			public const int VariablePrompt = 0x0025;
 		}
 		/// <summary>
 		/// The collection of variables matched by this parser
@@ -87,21 +87,36 @@ namespace E
 		/// so that variable indices in the automaton can be used to retrieve the variables in this table
 		/// </remarks>
 		private static readonly Symbol[] variables = {
-			new Symbol(0x001C, "time"), 
-			new Symbol(0x001D, "atrange"), 
-			new Symbol(0x001E, "at"), 
-			new Symbol(0x001F, "nrange"), 
-			new Symbol(0x0020, "nminutes"), 
-			new Symbol(0x0021, "nhours"), 
-			new Symbol(0x0022, "n"), 
-			new Symbol(0x0023, "a"), 
-			new Symbol(0x0024, "in"), 
-			new Symbol(0x0025, "soon"), 
-			new Symbol(0x0026, "soonish"), 
-			new Symbol(0x0027, "now"), 
-			new Symbol(0x0028, "tonight"), 
-			new Symbol(0x0029, "prompt"), 
-			new Symbol(0x003D, "__VAxiom") };
+			new Symbol(0x0018, "now"), 
+			new Symbol(0x0019, "nn"), 
+			new Symbol(0x001A, "nminutes"), 
+			new Symbol(0x001B, "nhours"), 
+			new Symbol(0x001C, "n"), 
+			new Symbol(0x001D, "a"), 
+			new Symbol(0x001E, "intime"), 
+			new Symbol(0x001F, "insoon"), 
+			new Symbol(0x0020, "in"), 
+			new Symbol(0x0021, "soon"), 
+			new Symbol(0x0022, "soonish"), 
+			new Symbol(0x0023, "time"), 
+			new Symbol(0x0024, "at"), 
+			new Symbol(0x0025, "prompt"), 
+			new Symbol(0x0026, "__V38"), 
+			new Symbol(0x0028, "__V40"), 
+			new Symbol(0x002C, "__V44"), 
+			new Symbol(0x002D, "__V45"), 
+			new Symbol(0x002E, "__V46"), 
+			new Symbol(0x002F, "__V47"), 
+			new Symbol(0x0030, "__V48"), 
+			new Symbol(0x0031, "__V49"), 
+			new Symbol(0x0032, "__V50"), 
+			new Symbol(0x0034, "__V52"), 
+			new Symbol(0x0035, "__V53"), 
+			new Symbol(0x0036, "__V54"), 
+			new Symbol(0x0037, "__V55"), 
+			new Symbol(0x0038, "__V56"), 
+			new Symbol(0x003B, "__V59"), 
+			new Symbol(0x003C, "__VAxiom") };
 		/// <summary>
 		/// The collection of virtuals matched by this parser
 		/// </summary>
@@ -124,42 +139,37 @@ namespace E
 		{
 			public virtual void OnTerminalWhiteSpace(ASTNode node) {}
 			public virtual void OnTerminalSeparator(ASTNode node) {}
-			public virtual void OnTerminalE(ASTNode node) {}
-			public virtual void OnTerminalDigit(ASTNode node) {}
-			public virtual void OnTerminalNonzero(ASTNode node) {}
-			public virtual void OnTerminalInteger(ASTNode node) {}
-			public virtual void OnTerminalHour(ASTNode node) {}
-			public virtual void OnTerminalMinute(ASTNode node) {}
 			public virtual void OnTerminalYfinal(ASTNode node) {}
-			public virtual void OnTerminalNumber(ASTNode node) {}
-			public virtual void OnTerminalTexttime(ASTNode node) {}
-			public virtual void OnTerminalN(ASTNode node) {}
-			public virtual void OnTerminalAtOrBefore(ASTNode node) {}
 			public virtual void OnTerminalWithin(ASTNode node) {}
-			public virtual void OnTerminalIn(ASTNode node) {}
 			public virtual void OnTerminalLike(ASTNode node) {}
-			public virtual void OnTerminalEventually(ASTNode node) {}
 			public virtual void OnTerminalTonight(ASTNode node) {}
+			public virtual void OnTerminalMins(ASTNode node) {}
+			public virtual void OnTerminalOthersoon(ASTNode node) {}
 			public virtual void OnTerminalSoon(ASTNode node) {}
 			public virtual void OnTerminalSoonish(ASTNode node) {}
-			public virtual void OnTerminalMin(ASTNode node) {}
-			public virtual void OnTerminalMins(ASTNode node) {}
+			public virtual void OnTerminalAtOrBefore(ASTNode node) {}
 			public virtual void OnTerminalAminute(ASTNode node) {}
 			public virtual void OnTerminalAnhour(ASTNode node) {}
 			public virtual void OnTerminalRange(ASTNode node) {}
-			public virtual void OnVariableTime(ASTNode node) {}
-			public virtual void OnVariableAtrange(ASTNode node) {}
-			public virtual void OnVariableAt(ASTNode node) {}
-			public virtual void OnVariableNrange(ASTNode node) {}
+			public virtual void OnTerminalInteger(ASTNode node) {}
+			public virtual void OnTerminalNumber(ASTNode node) {}
+			public virtual void OnTerminalMinute(ASTNode node) {}
+			public virtual void OnTerminalTexttime(ASTNode node) {}
+			public virtual void OnTerminalHour(ASTNode node) {}
+			public virtual void OnTerminalE(ASTNode node) {}
+			public virtual void OnVariableNow(ASTNode node) {}
+			public virtual void OnVariableNn(ASTNode node) {}
 			public virtual void OnVariableNminutes(ASTNode node) {}
 			public virtual void OnVariableNhours(ASTNode node) {}
 			public virtual void OnVariableN(ASTNode node) {}
 			public virtual void OnVariableA(ASTNode node) {}
+			public virtual void OnVariableIntime(ASTNode node) {}
+			public virtual void OnVariableInsoon(ASTNode node) {}
 			public virtual void OnVariableIn(ASTNode node) {}
 			public virtual void OnVariableSoon(ASTNode node) {}
 			public virtual void OnVariableSoonish(ASTNode node) {}
-			public virtual void OnVariableNow(ASTNode node) {}
-			public virtual void OnVariableTonight(ASTNode node) {}
+			public virtual void OnVariableTime(ASTNode node) {}
+			public virtual void OnVariableAt(ASTNode node) {}
 			public virtual void OnVariablePrompt(ASTNode node) {}
 		}
 
@@ -180,45 +190,40 @@ namespace E
 				VisitASTNode(node.Children[i], visitor);
 			switch(node.Symbol.ID)
 			{
-				case 0x0003: visitor.OnTerminalWhiteSpace(node); break;
-				case 0x0004: visitor.OnTerminalSeparator(node); break;
-				case 0x0005: visitor.OnTerminalE(node); break;
-				case 0x0006: visitor.OnTerminalDigit(node); break;
-				case 0x0007: visitor.OnTerminalNonzero(node); break;
-				case 0x0008: visitor.OnTerminalInteger(node); break;
-				case 0x0009: visitor.OnTerminalHour(node); break;
-				case 0x000A: visitor.OnTerminalMinute(node); break;
-				case 0x000B: visitor.OnTerminalYfinal(node); break;
-				case 0x000C: visitor.OnTerminalNumber(node); break;
-				case 0x000D: visitor.OnTerminalTexttime(node); break;
-				case 0x000E: visitor.OnTerminalN(node); break;
-				case 0x000F: visitor.OnTerminalAtOrBefore(node); break;
-				case 0x0010: visitor.OnTerminalWithin(node); break;
-				case 0x0011: visitor.OnTerminalIn(node); break;
-				case 0x0012: visitor.OnTerminalLike(node); break;
-				case 0x0013: visitor.OnTerminalEventually(node); break;
-				case 0x0014: visitor.OnTerminalTonight(node); break;
-				case 0x0015: visitor.OnTerminalSoon(node); break;
-				case 0x0016: visitor.OnTerminalSoonish(node); break;
-				case 0x0017: visitor.OnTerminalMin(node); break;
-				case 0x0018: visitor.OnTerminalMins(node); break;
-				case 0x0019: visitor.OnTerminalAminute(node); break;
-				case 0x001A: visitor.OnTerminalAnhour(node); break;
-				case 0x001B: visitor.OnTerminalRange(node); break;
-				case 0x001C: visitor.OnVariableTime(node); break;
-				case 0x001D: visitor.OnVariableAtrange(node); break;
-				case 0x001E: visitor.OnVariableAt(node); break;
-				case 0x001F: visitor.OnVariableNrange(node); break;
-				case 0x0020: visitor.OnVariableNminutes(node); break;
-				case 0x0021: visitor.OnVariableNhours(node); break;
-				case 0x0022: visitor.OnVariableN(node); break;
-				case 0x0023: visitor.OnVariableA(node); break;
-				case 0x0024: visitor.OnVariableIn(node); break;
-				case 0x0025: visitor.OnVariableSoon(node); break;
-				case 0x0026: visitor.OnVariableSoonish(node); break;
-				case 0x0027: visitor.OnVariableNow(node); break;
-				case 0x0028: visitor.OnVariableTonight(node); break;
-				case 0x0029: visitor.OnVariablePrompt(node); break;
+				case 0x0004: visitor.OnTerminalWhiteSpace(node); break;
+				case 0x0005: visitor.OnTerminalSeparator(node); break;
+				case 0x0006: visitor.OnTerminalYfinal(node); break;
+				case 0x0007: visitor.OnTerminalWithin(node); break;
+				case 0x0008: visitor.OnTerminalLike(node); break;
+				case 0x0009: visitor.OnTerminalTonight(node); break;
+				case 0x000A: visitor.OnTerminalMins(node); break;
+				case 0x000B: visitor.OnTerminalOthersoon(node); break;
+				case 0x000C: visitor.OnTerminalSoon(node); break;
+				case 0x000D: visitor.OnTerminalSoonish(node); break;
+				case 0x000E: visitor.OnTerminalAtOrBefore(node); break;
+				case 0x000F: visitor.OnTerminalAminute(node); break;
+				case 0x0010: visitor.OnTerminalAnhour(node); break;
+				case 0x0011: visitor.OnTerminalRange(node); break;
+				case 0x0012: visitor.OnTerminalInteger(node); break;
+				case 0x0013: visitor.OnTerminalNumber(node); break;
+				case 0x0014: visitor.OnTerminalMinute(node); break;
+				case 0x0015: visitor.OnTerminalTexttime(node); break;
+				case 0x0016: visitor.OnTerminalHour(node); break;
+				case 0x0017: visitor.OnTerminalE(node); break;
+				case 0x0018: visitor.OnVariableNow(node); break;
+				case 0x0019: visitor.OnVariableNn(node); break;
+				case 0x001A: visitor.OnVariableNminutes(node); break;
+				case 0x001B: visitor.OnVariableNhours(node); break;
+				case 0x001C: visitor.OnVariableN(node); break;
+				case 0x001D: visitor.OnVariableA(node); break;
+				case 0x001E: visitor.OnVariableIntime(node); break;
+				case 0x001F: visitor.OnVariableInsoon(node); break;
+				case 0x0020: visitor.OnVariableIn(node); break;
+				case 0x0021: visitor.OnVariableSoon(node); break;
+				case 0x0022: visitor.OnVariableSoonish(node); break;
+				case 0x0023: visitor.OnVariableTime(node); break;
+				case 0x0024: visitor.OnVariableAt(node); break;
+				case 0x0025: visitor.OnVariablePrompt(node); break;
 			}
 		}
 	}
