@@ -71,14 +71,14 @@ namespace EBot.Helpers
                 actions: new List<(string, Func<ReactionMessage, SocketReaction, Task>)>
                 {
                     ("☑", (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.Available)),
-                    ("❌", (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.Unavailable)),
-                    ("5️⃣", generateTimeOffsetAction(TimeSpan.FromMinutes(5))),
-                    ("🔟", generateTimeOffsetAction(TimeSpan.FromMinutes(10))),
-                    ("1️⃣", generateTimeOffsetAction(TimeSpan.FromHours(1))),
-                    ("2️⃣", generateTimeOffsetAction(TimeSpan.FromHours(2))),
-                    ("🕙", generateTimeSetAction(DateTimeOffset.Parse("10:00 PM"))),
-                    ("🕚", generateTimeSetAction(DateTimeOffset.Parse("11:00 PM"))),
-                    ("🕛",  generateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1)))
+                    ("<:unavailable:706006786842296480>", (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.Unavailable)),
+                    ("<:five:706000163738484756>", generateTimeOffsetAction(TimeSpan.FromMinutes(5))),
+                    ("<:fifteen:706000163562323979>", generateTimeOffsetAction(TimeSpan.FromMinutes(15))),
+                    ("<:hour:706000163688153088>", generateTimeOffsetAction(TimeSpan.FromHours(1))),
+                    ("<:twohours:706000163596009514>", generateTimeOffsetAction(TimeSpan.FromHours(2))),
+                    ("<:ten:706000163801399346>", generateTimeSetAction(DateTimeOffset.Parse("10:00 PM"))),
+                    ("<:eleven:706000163142893639>", generateTimeSetAction(DateTimeOffset.Parse("11:00 PM"))),
+                    ("<:twelve:706000163826565200>",  generateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1)))
                 },
                 onTimeout: () =>
                 {
@@ -88,7 +88,11 @@ namespace EBot.Helpers
 
             Func<ReactionMessage, SocketReaction, Task> generateTimeOffsetAction(TimeSpan offset)
             {
-                return (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.AvailableLater, EMessages[rm.Message.Id].Statuses.GetValueOrDefault(sr.UserId, EStatus.FromState(EState.Unknown)).TimeAvailable + offset);
+                return (rm, sr) =>
+                {
+                    EStatus s = EMessages[rm.Message.Id].Statuses.GetValueOrDefault(sr.UserId, EStatus.FromState(EState.Unknown));
+                    return UpdateEStatus(rm.Message.Id, sr.UserId, EState.AvailableLater, (s.State == EState.AvailableLater ? s.TimeAvailable : DateTimeOffset.Now) + offset);
+                };
             }
 
             Func<ReactionMessage, SocketReaction, Task> generateTimeSetAction(DateTimeOffset time)
@@ -129,7 +133,7 @@ namespace EBot.Helpers
         {
             try
             {
-                var msg = (RestUserMessage)await emessage.Context.Channel.GetMessageAsync(message);
+                var msg = (IUserMessage)await emessage.Context.Channel.GetMessageAsync(message);
                 if (msg != null)
                 {
                     await msg.ModifyAsync((props) => props.Embed = GenerateEmbed(emessage).Build());
@@ -164,7 +168,10 @@ namespace EBot.Helpers
 
             foreach (ulong user in message.Statuses.Keys.ToArray())
             {
-                builder.AddField(message.Context.NicknameOrUsername(user), getStatusMessage(message.Statuses[user]));
+                string name = message.Context.NicknameOrUsername(user);
+                if (name == null) continue;
+
+                builder.AddField(name, getStatusMessage(message.Statuses[user]));
             }
 
             builder.WithFooter("Last Updated");
@@ -176,7 +183,7 @@ namespace EBot.Helpers
             {
                 return status.State switch
                 {
-                    EState.Unavailable => "❌ Unavailable",
+                    EState.Unavailable => "<:unavailable:706006786842296480> Unavailable",
                     EState.AvailableLater => getAvailableLaterStatus(status.TimeAvailable),
                     EState.Available => "☑ Available Now",
                     EState.Ready => "✅ Ready (In-Voice)",

@@ -20,6 +20,7 @@ namespace EBot.Commands
 
         public string NicknameOrUsername(IUser user)
         {
+            if (user == null) return null;
             return user is IGuildUser gu && !string.IsNullOrEmpty(gu.Nickname) ? gu.Nickname : user.Username;
         }
     }
