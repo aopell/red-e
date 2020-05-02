@@ -19,7 +19,7 @@ namespace EBot.Helpers
 {
     public static class EMessageHelper
     {
-        private static Dictionary<ulong, EMessage> EMessages = new Dictionary<ulong, EMessage>();
+        public static Dictionary<ulong, EMessage> EMessages = new Dictionary<ulong, EMessage>();
 
         public static async Task MessageRecevied(SocketMessage msg)
         {
@@ -56,11 +56,21 @@ namespace EBot.Helpers
             // TODO: Update time of sender based on receieved message
         }
 
-        private static async Task CreateEMessage(BotCommandContext context)
+        public static async Task CreateEMessage(EMessage emessage)
+        {
+            var message = await emessage.Context.Channel.SendMessageAsync(embed: GenerateEmbed(emessage).Build());
+            ulong messageId = message.Id;
+            CreateEMessage(emessage.Context, emessage, message, messageId);
+        }
+
+        public static async Task CreateEMessage(BotCommandContext context)
         {
             EMessage emessage = new EMessage(context, context.Bot.Options.DefaultUsers);
-            var message = await context.Channel.SendMessageAsync(embed: GenerateEmbed(emessage).Build());
-            ulong messageId = message.Id;
+            await CreateEMessage(emessage);
+        }
+
+        private static void CreateEMessage(BotCommandContext context, EMessage emessage, RestUserMessage message, ulong messageId)
+        {
             EMessages.Add(messageId, emessage);
             ReactionMessageHelper.CreateReactionMessage(
                 context,
@@ -150,7 +160,7 @@ namespace EBot.Helpers
             await DiscordBot.MainInstance.Log(new LogMessage(LogSeverity.Info, "EMessageHelper", $"{userId} updated estatus to {state} at time {timeAvailable}"));
 
             emessage.Statuses[userId] = EStatus.FromState(state, timeAvailable);
-            await UpdateEMessage(messageId, emessage);
+            await UpdateEMessages();
         }
 
         public static async Task UpdateEStatuses(ulong userId, EState state)
