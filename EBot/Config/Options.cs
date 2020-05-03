@@ -10,5 +10,7 @@ namespace EBot.Config
         public List<ulong> DefaultUsers { get; set; }
         public ulong VoiceWaitingRoomId { get; set; }
         public ulong VoiceTargetRoomId { get; set; }
+        public string[] ShameMessages { get; set; }
+        public string AvailableRoleName { get; set; }
     }
 }

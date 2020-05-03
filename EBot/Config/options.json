@@ -7,5 +7,14 @@
     213879682452553729
   ],
   "VoiceWaitingRoomId": 136711405356318722,
-  "VoiceTargetRoomId": 229828751104540672
+  "VoiceTargetRoomId": 229828751104540672,
+  "ShameMessages": [
+    "{0}, liar.",
+    "{0}, we're waiting",
+    "{0}, take your time, it's okay",
+    "{0}, could you be any slower?",
+    "{0}, what's taking you so long?",
+    "{0}, hurry up!"
+  ],
+  "AvailableRoleName": "eeeeeeee"
 }

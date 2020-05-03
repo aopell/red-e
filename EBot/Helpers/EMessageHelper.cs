@@ -29,7 +29,7 @@ namespace EBot.Helpers
 
             if (!parse.IsSuccess) return;
 
-            await HandleEMessage(message, parse.Root);
+            await HandleEMessagePrompt(message, parse.Root);
         }
 
         public static async Task UserVoiceStateUpdated(SocketUser user, SocketVoiceState prev, SocketVoiceState curr)
@@ -47,13 +47,29 @@ namespace EBot.Helpers
             }
         }
 
-        private static async Task HandleEMessage(SocketUserMessage message, ASTNode root)
+        private static async Task HandleEMessagePrompt(SocketUserMessage message, ASTNode root)
         {
             var context = new BotCommandContext(DiscordBot.MainInstance.Client, message, DiscordBot.MainInstance);
 
-            await CreateEMessage(context);
-
             // TODO: Update time of sender based on receieved message
+            DateTimeOffset? targetTime = null;
+
+            bool existing = EMessages.Any(kvp => kvp.Value.Context.Channel.Id == context.Channel.Id);
+
+            if (existing)
+            {
+                var confirmMessage = await context.Channel.SendMessageAsync("There is already an active e message in this channel. Create another?");
+                ReactionMessageHelper.CreateConfirmReactionMessage(context, confirmMessage, (rm, sr) => Task.WhenAll(CreateEMessage(context, targetTime), confirmMessage.DeleteAsync()), (rm, sr) => confirmMessage.DeleteAsync());
+                return;
+            }
+
+            await CreateEMessage(context, targetTime);
+        }
+
+        public static async Task CreateEMessage(BotCommandContext context, DateTimeOffset? targetTime)
+        {
+            EMessage emessage = new EMessage(context, targetTime, context.Bot.Options.DefaultUsers);
+            await CreateEMessage(emessage);
         }
 
         public static async Task CreateEMessage(EMessage emessage)
@@ -61,12 +77,6 @@ namespace EBot.Helpers
             var message = await emessage.Context.Channel.SendMessageAsync(embed: GenerateEmbed(emessage).Build());
             ulong messageId = message.Id;
             CreateEMessage(emessage.Context, emessage, message, messageId);
-        }
-
-        public static async Task CreateEMessage(BotCommandContext context)
-        {
-            EMessage emessage = new EMessage(context, context.Bot.Options.DefaultUsers);
-            await CreateEMessage(emessage);
         }
 
         private static void CreateEMessage(BotCommandContext context, EMessage emessage, RestUserMessage message, ulong messageId)
@@ -80,15 +90,15 @@ namespace EBot.Helpers
                 timeout: (int)TimeSpan.FromHours(12).TotalMilliseconds,
                 actions: new List<(string, Func<ReactionMessage, SocketReaction, Task>)>
                 {
-                    ("☑", (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.Available)),
+                    ("<:available:706270615312662568>", (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.Available)),
                     ("<:unavailable:706006786842296480>", (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.Unavailable)),
-                    ("<:five:706000163738484756>", generateTimeOffsetAction(TimeSpan.FromMinutes(5))),
-                    ("<:fifteen:706000163562323979>", generateTimeOffsetAction(TimeSpan.FromMinutes(15))),
-                    ("<:hour:706000163688153088>", generateTimeOffsetAction(TimeSpan.FromHours(1))),
+                    ("<:fiveminutes:706000163738484756>", generateTimeOffsetAction(TimeSpan.FromMinutes(5))),
+                    ("<:fifteenminutes:706000163562323979>", generateTimeOffsetAction(TimeSpan.FromMinutes(15))),
+                    ("<:onehour:706000163688153088>", generateTimeOffsetAction(TimeSpan.FromHours(1))),
                     ("<:twohours:706000163596009514>", generateTimeOffsetAction(TimeSpan.FromHours(2))),
-                    ("<:ten:706000163801399346>", generateTimeSetAction(DateTimeOffset.Parse("10:00 PM"))),
-                    ("<:eleven:706000163142893639>", generateTimeSetAction(DateTimeOffset.Parse("11:00 PM"))),
-                    ("<:twelve:706000163826565200>",  generateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1)))
+                    ("<:tenoclock:706000163801399346>", generateTimeSetAction(DateTimeOffset.Parse("10:00 PM"))),
+                    ("<:elevenoclock:706000163142893639>", generateTimeSetAction(DateTimeOffset.Parse("11:00 PM"))),
+                    ("<:twelveoclock:706000163826565200>",  generateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1)))
                 },
                 onTimeout: () =>
                 {
@@ -111,12 +121,14 @@ namespace EBot.Helpers
             }
         }
 
-        public static async Task UpdateEMessages()
+        public static void UpdateEMessages()
         {
             foreach (ulong id in EMessages.Keys.ToArray())
             {
                 var emessage = EMessages.GetValueOrDefault(id);
                 if (emessage == null) continue;
+
+                var role = emessage.Context.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
 
                 foreach (ulong userId in emessage.Statuses.Keys.ToArray())
                 {
@@ -126,11 +138,24 @@ namespace EBot.Helpers
                     if (status.State == EState.AvailableLater && status.TimeAvailable < DateTimeOffset.Now && !status.ShamedForLateness)
                     {
                         status.ShamedForLateness = true;
-                        await emessage.Context.Channel.SendMessageAsync($"<@{userId}>, liar.");
+                        string shameMessage = DiscordBot.MainInstance.Options.ShameMessages.OrderBy(x => Guid.NewGuid()).First();
+                        _ = emessage.Context.Channel.SendMessageAsync(string.Format(shameMessage, $"<@{userId}>"));
+                    }
+
+                    if (role != null)
+                    {
+                        if (status.State == EState.Available || (status.State == EState.AvailableLater && status.TimeAvailable <= DateTimeOffset.Now))
+                        {
+                            _ = emessage.Context.Guild.GetUser(userId).AddRoleAsync(role);
+                        }
+                        else if (status.State != EState.Done)
+                        {
+                            _ = emessage.Context.Guild.GetUser(userId).RemoveRoleAsync(role);
+                        }
                     }
                 }
 
-                await UpdateEMessage(id, emessage);
+                _ = UpdateEMessage(id, emessage);
 
                 if (DateTimeOffset.Now - EMessages[id].CreatedTimestamp > TimeSpan.FromHours(12))
                 {
@@ -160,7 +185,7 @@ namespace EBot.Helpers
             await DiscordBot.MainInstance.Log(new LogMessage(LogSeverity.Info, "EMessageHelper", $"{userId} updated estatus to {state} at time {timeAvailable}"));
 
             emessage.Statuses[userId] = EStatus.FromState(state, timeAvailable);
-            await UpdateEMessages();
+            UpdateEMessages();
         }
 
         public static async Task UpdateEStatuses(ulong userId, EState state)
@@ -175,6 +200,7 @@ namespace EBot.Helpers
         {
             EmbedBuilder builder = new EmbedBuilder();
             builder.Title = "eeee?";
+            builder.Description = $"{message.Context.NicknameOrUsername(message.Creator)} proposes that we eeee{(message.TargetTime == null ? "" : $" at {message.TargetTime:h:mm tt}")}";
 
             foreach (ulong user in message.Statuses.Keys.ToArray())
             {
@@ -195,10 +221,10 @@ namespace EBot.Helpers
                 {
                     EState.Unavailable => "<:unavailable:706006786842296480> Unavailable",
                     EState.AvailableLater => getAvailableLaterStatus(status.TimeAvailable),
-                    EState.Available => "☑ Available Now",
-                    EState.Ready => "✅ Ready (In-Voice)",
+                    EState.Available => "<:available:706270615312662568> Available Now",
+                    EState.Ready => "<:ready:706270984973451295> Ready (In Voice)",
                     EState.Done => "🔵 Done",
-                    _ => "❔ Unknown",
+                    _ => "<:unknown:706271972983701524> Unknown",
                 };
             }
 
@@ -256,24 +282,24 @@ namespace EBot.Helpers
 
         public TimeSpan TexttimeOffset(string texttime)
         {
-            switch (texttime)
+            return texttime switch
             {
-                case "one": return new TimeSpan(1, 0, 0);
-                case "two": return new TimeSpan(2, 0, 0);
-                case "three": return new TimeSpan(3, 0, 0);
-                case "four": return new TimeSpan(4, 0, 0);
-                case "five": return new TimeSpan(5, 0, 0);
-                case "six": return new TimeSpan(6, 0, 0);
-                case "seven": return new TimeSpan(7, 0, 0);
-                case "eight": return new TimeSpan(8, 0, 0);
-                case "nine": return new TimeSpan(9, 0, 0);
-                case "ten": return new TimeSpan(10, 0, 0);
-                case "eleven": return new TimeSpan(11, 0, 0);
-                case "twelve":
-                case "noon":
-                case "midnight": return new TimeSpan(12, 0, 0);
-                default: return new TimeSpan(-1, 0, 0);
-            }
+                "one" => new TimeSpan(1, 0, 0),
+                "two" => new TimeSpan(2, 0, 0),
+                "three" => new TimeSpan(3, 0, 0),
+                "four" => new TimeSpan(4, 0, 0),
+                "five" => new TimeSpan(5, 0, 0),
+                "six" => new TimeSpan(6, 0, 0),
+                "seven" => new TimeSpan(7, 0, 0),
+                "eight" => new TimeSpan(8, 0, 0),
+                "nine" => new TimeSpan(9, 0, 0),
+                "ten" => new TimeSpan(10, 0, 0),
+                "eleven" => new TimeSpan(11, 0, 0),
+                "twelve" => new TimeSpan(12, 0, 0),
+                "noon" => new TimeSpan(12, 0, 0),
+                "midnight" => new TimeSpan(12, 0, 0),
+                _ => new TimeSpan(-1, 0, 0),
+            };
         }
     }
 }
