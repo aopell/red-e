@@ -69,6 +69,16 @@ namespace EBot.Helpers
         public static async Task CreateEMessage(BotCommandContext context, DateTimeOffset? targetTime)
         {
             EMessage emessage = new EMessage(context, targetTime, context.Bot.Options.DefaultUsers);
+
+            var role = emessage.Context.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
+            if (role != null)
+            {
+                foreach (ulong userId in emessage.Statuses.Keys)
+                {
+                    _ = emessage.Context.Guild.GetUser(userId).RemoveRoleAsync(role);
+                }
+            }
+
             await CreateEMessage(emessage);
         }
 
@@ -92,7 +102,7 @@ namespace EBot.Helpers
                 {
                     ("<:available:706270615312662568>", (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.Available)),
                     ("<:unavailable:706006786842296480>", (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.Unavailable)),
-                    ("<:fiveminutes:706000163738484756>", generateTimeOffsetAction(TimeSpan.FromMinutes(5))),
+                    ("<:fiveminutes:706000163738484756>", generateTimeOffsetAction(TimeSpan.FromMinutes(0.1))),
                     ("<:fifteenminutes:706000163562323979>", generateTimeOffsetAction(TimeSpan.FromMinutes(15))),
                     ("<:onehour:706000163688153088>", generateTimeOffsetAction(TimeSpan.FromHours(1))),
                     ("<:twohours:706000163596009514>", generateTimeOffsetAction(TimeSpan.FromHours(2))),
@@ -129,7 +139,6 @@ namespace EBot.Helpers
                 if (emessage == null) continue;
 
                 var role = emessage.Context.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
-
                 foreach (ulong userId in emessage.Statuses.Keys.ToArray())
                 {
                     var status = emessage.Statuses.GetValueOrDefault(userId);
@@ -140,18 +149,7 @@ namespace EBot.Helpers
                         status.ShamedForLateness = true;
                         string shameMessage = DiscordBot.MainInstance.Options.ShameMessages.OrderBy(x => Guid.NewGuid()).First();
                         _ = emessage.Context.Channel.SendMessageAsync(string.Format(shameMessage, $"<@{userId}>"));
-                    }
-
-                    if (role != null)
-                    {
-                        if (status.State == EState.Available || (status.State == EState.AvailableLater && status.TimeAvailable <= DateTimeOffset.Now))
-                        {
-                            _ = emessage.Context.Guild.GetUser(userId).AddRoleAsync(role);
-                        }
-                        else if (status.State != EState.Done)
-                        {
-                            _ = emessage.Context.Guild.GetUser(userId).RemoveRoleAsync(role);
-                        }
+                        _ = emessage.Context.Guild.GetUser(userId).AddRoleAsync(role);
                     }
                 }
 
@@ -182,9 +180,24 @@ namespace EBot.Helpers
             EMessage emessage = EMessages.GetValueOrDefault(messageId);
             if (emessage == null) return;
 
-            await DiscordBot.MainInstance.Log(new LogMessage(LogSeverity.Info, "EMessageHelper", $"{userId} updated estatus to {state} at time {timeAvailable}"));
+            await DiscordBot.MainInstance.Log(new LogMessage(LogSeverity.Info, "UpdateEStatus", $"{userId} updated estatus to {state} at time {timeAvailable}"));
 
-            emessage.Statuses[userId] = EStatus.FromState(state, timeAvailable);
+            var status = EStatus.FromState(state, timeAvailable);
+            emessage.Statuses[userId] = status;
+
+            var role = emessage.Context.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
+            if (role != null)
+            {
+                if (status.State == EState.Available)
+                {
+                    _ = emessage.Context.Guild.GetUser(userId).AddRoleAsync(role);
+                }
+                else
+                {
+                    _ = emessage.Context.Guild.GetUser(userId).RemoveRoleAsync(role);
+                }
+            }
+
             UpdateEMessages();
         }
 
