@@ -40,7 +40,17 @@ namespace EBot.Models
             }
         }
 
-        private EMessage() { /* For JSON Serialization */ }
+        [JsonConstructor]
+        private EMessage(ulong creatorId, ulong channelId, ulong guildId, List<ulong> messageIds, Dictionary<ulong, EStatus> statuses, DateTimeOffset createdTimestamp, DateTimeOffset? proposedTime)
+        {
+            CreatorId = creatorId;
+            ChannelId = channelId;
+            GuildId = guildId;
+            MessageIds = messageIds;
+            Statuses = statuses;
+            CreatedTimestamp = createdTimestamp;
+            ProposedTime = proposedTime;
+        }
     }
 
     public class EStatus
@@ -53,6 +63,15 @@ namespace EBot.Models
         private EStatus()
         {
             TimeUpdated = DateTimeOffset.Now;
+        }
+
+        [JsonConstructor]
+        private EStatus(EState state, DateTimeOffset timeAvailable, DateTimeOffset timeUpdated, bool shamedForLateness)
+        {
+            State = state;
+            TimeAvailable = timeAvailable;
+            TimeUpdated = timeUpdated;
+            ShamedForLateness = shamedForLateness;
         }
 
         public static EStatus FromState(EState state, DateTimeOffset? timeAvailable = null)

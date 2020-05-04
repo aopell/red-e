@@ -19,7 +19,8 @@ namespace EBot.Helpers
 {
     public static class EMessageHelper
     {
-        public static Dictionary<ulong, EMessage> EMessages = new Dictionary<ulong, EMessage>();
+        public static Dictionary<ulong, EMessage> EMessages => DiscordBot.MainInstance.EMessages.Messages;
+        public static void SaveEMessages() => DiscordBot.MainInstance.EMessages.SaveConfig();
 
         public static async Task MessageRecevied(SocketMessage msg)
         {
@@ -93,6 +94,7 @@ namespace EBot.Helpers
         {
             emessage.MessageIds.Add(messageId);
             EMessages[emessage.Channel.Id] = emessage;
+            SaveEMessages();
             ReactionMessageHelper.CreateReactionMessage(
                 context,
                 message,
@@ -101,9 +103,9 @@ namespace EBot.Helpers
                 timeout: (int)TimeSpan.FromHours(12).TotalMilliseconds,
                 actions: new List<(string, Func<ReactionMessage, SocketReaction, Task>)>
                 {
-                    ("<:available:706270615312662568>", (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.Available)),
-                    ("<:maybe:706702223446376517>", (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.Maybe)),
-                    ("<:unavailable:706702240467124345>", (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.Unavailable)),
+                    ("<:available:706270615312662568>", (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Available)),
+                    ("<:maybe:706702223446376517>", (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Maybe)),
+                    ("<:unavailable:706702240467124345>", (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Unavailable)),
                     ("<:fiveminutes:706000163738484756>", generateTimeOffsetAction(TimeSpan.FromMinutes(5))),
                     ("<:fifteenminutes:706000163562323979>", generateTimeOffsetAction(TimeSpan.FromMinutes(15))),
                     ("<:onehour:706000163688153088>", generateTimeOffsetAction(TimeSpan.FromHours(1))),
@@ -122,8 +124,8 @@ namespace EBot.Helpers
             {
                 return (rm, sr) =>
                 {
-                    EStatus s = EMessages[rm.Context.Channel.Id].Statuses.GetValueOrDefault(sr.UserId, EStatus.FromState(EState.Unknown));
-                    return UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.AvailableLater, (s.State == EState.AvailableLater ? s.TimeAvailable : DateTimeOffset.Now) + offset);
+                    EStatus s = EMessages.GetValueOrDefault(rm.Context.Channel.Id)?.Statuses.GetValueOrDefault(sr.UserId, EStatus.FromState(EState.Unknown));
+                    return UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.AvailableLater, (s != null && s.State == EState.AvailableLater ? s.TimeAvailable : DateTimeOffset.Now) + offset);
                 };
             }
 
@@ -186,6 +188,7 @@ namespace EBot.Helpers
 
             var status = EStatus.FromState(state, timeAvailable);
             emessage.Statuses[userId] = status;
+            SaveEMessages();
 
             var role = emessage.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
             if (role != null)
@@ -200,7 +203,7 @@ namespace EBot.Helpers
                 }
             }
 
-            UpdateEMessages();
+            _ = UpdateEMessage(emessage);
         }
 
         public static async Task UpdateEStatuses(ulong userId, EState state)

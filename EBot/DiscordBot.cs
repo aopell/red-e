@@ -18,6 +18,7 @@ namespace EBot
         public DiscordSocketClient Client { get; private set; }
         public Secret Secret { get; private set; }
         public Options Options { get; private set; }
+        public EMessages EMessages { get; private set; }
 
         public static async Task Main()
         {
