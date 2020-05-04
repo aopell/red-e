@@ -45,6 +45,8 @@ namespace EBot.Models
                 TimeAvailable = state == EState.AvailableLater ? time : DateTimeOffset.Now
             };
         }
+
+        public override string ToString() => $"{State}: {TimeAvailable}";
     }
 
     public enum EState

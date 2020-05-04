@@ -51,27 +51,26 @@ namespace EBot.Helpers
         {
             var context = new BotCommandContext(DiscordBot.MainInstance.Client, message, DiscordBot.MainInstance);
 
-            await CreateEMessage(context);
-
-            // TODO: Update time of sender based on receieved message
+            await CreateEMessage(context, EWalker.Read(root));
         }
 
-        public static async Task CreateEMessage(EMessage emessage)
+        public static async Task CreateEMessage(EMessage emessage, EStatus senderStatus)
         {
             var message = await emessage.Context.Channel.SendMessageAsync(embed: GenerateEmbed(emessage).Build());
             ulong messageId = message.Id;
-            CreateEMessage(emessage.Context, emessage, message, messageId);
+            CreateEMessage(emessage.Context, emessage, message, messageId, senderStatus);
         }
 
-        public static async Task CreateEMessage(BotCommandContext context)
+        public static async Task CreateEMessage(BotCommandContext context, EStatus senderStatus)
         {
             EMessage emessage = new EMessage(context, context.Bot.Options.DefaultUsers);
-            await CreateEMessage(emessage);
+            await CreateEMessage(emessage, senderStatus);
         }
 
-        private static void CreateEMessage(BotCommandContext context, EMessage emessage, RestUserMessage message, ulong messageId)
+        private static void CreateEMessage(BotCommandContext context, EMessage emessage, RestUserMessage message, ulong messageId, EStatus senderStatus)
         {
             EMessages.Add(messageId, emessage);
+            UpdateEStatus(message.Id, message.Author.Id, senderStatus == null ? EStatus.FromState(EState.Unknown) : senderStatus);
             ReactionMessageHelper.CreateReactionMessage(
                 context,
                 message,
@@ -154,20 +153,25 @@ namespace EBot.Helpers
 
         public static async Task UpdateEStatus(ulong messageId, ulong userId, EState state, DateTimeOffset? timeAvailable = null)
         {
+            await UpdateEStatus(messageId, userId, EStatus.FromState(state, timeAvailable));
+        }
+        
+        public static async Task UpdateEStatus(ulong messageId, ulong userId, EStatus status)
+        {
             EMessage emessage = EMessages.GetValueOrDefault(messageId);
             if (emessage == null) return;
 
-            await DiscordBot.MainInstance.Log(new LogMessage(LogSeverity.Info, "EMessageHelper", $"{userId} updated estatus to {state} at time {timeAvailable}"));
+            await DiscordBot.MainInstance.Log(new LogMessage(LogSeverity.Info, "EMessageHelper", $"{userId} updated estatus to {status}"));
 
-            emessage.Statuses[userId] = EStatus.FromState(state, timeAvailable);
+            emessage.Statuses[userId] = status;
             await UpdateEMessages();
         }
 
         public static async Task UpdateEStatuses(ulong userId, EState state)
         {
             foreach (ulong id in EMessages.Keys.ToArray())
-            {
-                await UpdateEStatus(id, userId, state);
+            { 
+                UpdateEStatus(id, userId, state);
             }
         }
 
@@ -216,63 +220,84 @@ namespace EBot.Helpers
         }
     }
 
-    public class EWalker
+    public static class EWalker
     {
-        public DateTime Read(ASTNode node)
+        public static EStatus Read(ASTNode node)
         {
             switch (node.Symbol.ID)
             {
                 case EParser.ID.VariableTime: return ReadTime(node);
+                case EParser.ID.VariableIn: return ReadTime(node);
             }
 
-            return DateTime.MinValue;
+            return EStatus.FromState(EState.Unknown);
         }
 
-        public DateTime ReadTime(ASTNode node)
+        public static EStatus ReadIn(ASTNode node)
+        {
+            var child = node.Children.First();
+
+            switch (child.Symbol.ID)
+            {
+                case EParser.ID.VariableN: return Read(child);
+            }
+            
+            return EStatus.FromState(EState.Unknown);
+
+        }
+
+        public static EStatus ReadN(ASTNode node)
+        {
+            ASTNode number = node.Children[0];
+
+            int time = int.Parse(number.Value);
+
+            ASTNode timeInterval = node.Children[1];
+            
+            return EStatus.FromState(EState.AvailableLater, DateTimeOffset.Now + (timeInterval.Symbol.ID == EParser.ID.VariableNhours ? TimeSpan.FromHours(time) : TimeSpan.FromMinutes(time)));
+        }
+        
+        public  static EStatus ReadTime(ASTNode node)
         {
             var children = node.Children;
 
             var time = children.First();
 
-            TimeSpan ampm;
-            if (DateTime.Now.Hour < 12) ampm = new TimeSpan(0, 0, 0);
-            else ampm = new TimeSpan(12, 0, 0);
+            TimeSpan ampm = DateTime.Now.Hour < 12 ? new TimeSpan(0, 0, 0) : new TimeSpan(12, 0, 0);
 
             if (time.Symbol.ID == ELexer.ID.TerminalTexttime)
             {
-                return DateTime.Today + ampm + TexttimeOffset(time.Value);
+                return EStatus.FromState(EState.AvailableLater, DateTime.Today + ampm + TexttimeOffset(time.Value));
             }
-            else
-            {
-                var minute = 0;
+            
+            int minute = 0;
 
-                if (children.Count == 2) Int32.Parse(children.ElementAt(1).Value);
+            if (children.Count == 2) minute = int.Parse(children.ElementAt(1).Value);
 
-                var hour = Int32.Parse(time.Value);
+            int hour = int.Parse(time.Value);
 
-                return DateTime.Today + ampm + new TimeSpan(hour, minute, 0);
-            }
+            return EStatus.FromState(EState.AvailableLater, DateTime.Today + ampm + new TimeSpan(hour, minute, 0));
         }
 
-        public TimeSpan TexttimeOffset(string texttime)
+        public static TimeSpan TexttimeOffset(string texttime)
         {
             switch (texttime)
             {
-                case "one": return new TimeSpan(1, 0, 0);
-                case "two": return new TimeSpan(2, 0, 0);
-                case "three": return new TimeSpan(3, 0, 0);
-                case "four": return new TimeSpan(4, 0, 0);
-                case "five": return new TimeSpan(5, 0, 0);
-                case "six": return new TimeSpan(6, 0, 0);
-                case "seven": return new TimeSpan(7, 0, 0);
-                case "eight": return new TimeSpan(8, 0, 0);
-                case "nine": return new TimeSpan(9, 0, 0);
-                case "ten": return new TimeSpan(10, 0, 0);
-                case "eleven": return new TimeSpan(11, 0, 0);
+                case "one": return TimeSpan.FromHours(1);
+                case "two": return TimeSpan.FromHours(2);
+                case "three": return TimeSpan.FromHours(3);
+                case "four": return TimeSpan.FromHours(4);
+                case "five": return TimeSpan.FromHours(5);
+                case "six": return TimeSpan.FromHours(6);
+                case "seven": return TimeSpan.FromHours(7);
+                case "eight": return TimeSpan.FromHours(8);
+                case "nine": return TimeSpan.FromHours(9);
+                case "ten": return TimeSpan.FromHours(10);
+                case "eleven": return TimeSpan.FromHours(11);
                 case "twelve":
                 case "noon":
-                case "midnight": return new TimeSpan(12, 0, 0);
-                default: return new TimeSpan(-1, 0, 0);
+                case "midnight": return TimeSpan.FromHours(12);
+                default: return TimeSpan.FromHours(-1);
             }
         }
     }

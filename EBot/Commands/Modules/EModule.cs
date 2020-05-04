@@ -16,7 +16,7 @@ namespace EBot.Commands.Modules
             var emessage = EMessageHelper.EMessages.Where(kvp => kvp.Value.Context.Channel.Id == Context.Channel.Id).OrderByDescending(kvp => kvp.Value.CreatedTimestamp.Ticks).FirstOrDefault().Value;
             if (emessage == null) throw new CommandExecutionException("There are no e messages currently in this channel");
 
-            await EMessageHelper.CreateEMessage(emessage);
+            await EMessageHelper.CreateEMessage(emessage, null);
         }
     }
 }

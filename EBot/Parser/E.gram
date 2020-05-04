@@ -54,7 +54,7 @@ grammar E
     }
 
     context start {
-      E -> MSG? ('e' | 'E')+;
+      E -> MSG? ' ' ('e' | 'E')+;
     }
   }
   rules
