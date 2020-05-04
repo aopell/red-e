@@ -82,8 +82,12 @@ namespace EBot.Helpers
                     }
                     else
                     {
-                        await message.RemoveAllReactionsAsync();
                         DeleteReactionMessage(reactionMessage);
+                        try
+                        {
+                            await message.RemoveAllReactionsAsync();
+                        }
+                        catch { }
                     }
                 }
                 else if (reactionMessage != null && reaction.User.IsSpecified)

@@ -157,7 +157,7 @@ namespace EBot
 
         private Task Client_Ready()
         {
-            MinuteTimer();
+            _ = MinuteTimer();
             return Task.CompletedTask;
         }
 
@@ -171,7 +171,7 @@ namespace EBot
         {
             while (true)
             {
-                await EMessageHelper.UpdateEMessages();
+                EMessageHelper.UpdateEMessages();
                 await Task.Delay(TimeSpan.FromMinutes(1));
             }
         }

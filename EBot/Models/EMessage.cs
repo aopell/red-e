@@ -1,4 +1,4 @@
-﻿using EBot.Commands;
+using EBot.Commands;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -11,10 +11,14 @@ namespace EBot.Models
         public BotCommandContext Context { get; set; }
         public Dictionary<ulong, EStatus> Statuses { get; set; }
         public DateTimeOffset CreatedTimestamp { get; }
+        public DateTimeOffset? TargetTime { get; }
+        public ulong Creator { get; }
 
-        public EMessage(BotCommandContext context, IEnumerable<ulong> users)
+        public EMessage(BotCommandContext context, DateTimeOffset? targetTime, IEnumerable<ulong> users)
         {
+            Creator = context.User.Id;
             Context = context;
+            TargetTime = targetTime;
             Statuses = new Dictionary<ulong, EStatus>();
             CreatedTimestamp = DateTimeOffset.Now;
             foreach (ulong user in users)
@@ -53,6 +57,7 @@ namespace EBot.Models
     {
         Unknown,
         Unavailable,
+        Maybe,
         AvailableLater,
         Available,
         Ready,
