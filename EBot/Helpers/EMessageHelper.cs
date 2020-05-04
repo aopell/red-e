@@ -53,19 +53,24 @@ namespace EBot.Helpers
             
             bool existing = EMessages.Any(kvp => kvp.Value.Context.Channel.Id == context.Channel.Id);
 
+            var senderStatus = EWalker.Read(root);
+
             if (existing)
             {
                 var confirmMessage = await context.Channel.SendMessageAsync("There is already an active e message in this channel. Create another?");
-                ReactionMessageHelper.CreateConfirmReactionMessage(context, confirmMessage, (rm, sr) => Task.WhenAll(CreateEMessage(context, targetTime), confirmMessage.DeleteAsync()), (rm, sr) => confirmMessage.DeleteAsync());
-                return;
+                ReactionMessageHelper.CreateConfirmReactionMessage(context, confirmMessage, 
+                                                                   (rm, sr) => Task.WhenAll(CreateEMessage(context, senderStatus), confirmMessage.DeleteAsync()), 
+                                                                   (rm, sr) => confirmMessage.DeleteAsync());
             }
-
-            await CreateEMessage(context, EWalker.Read(root));
+            else
+            {
+                await CreateEMessage(context, senderStatus);
+            }
         }
 
-        public static async Task CreateEMessage(BotCommandContext context, DateTimeOffset? targetTime)
+        public static async Task CreateEMessage(BotCommandContext context, EStatus senderStatus)
         {
-            EMessage emessage = new EMessage(context, targetTime, context.Bot.Options.DefaultUsers);
+            EMessage emessage = new EMessage(context, senderStatus, context.Bot.Options.DefaultUsers);
 
             var role = emessage.Context.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
             if (role != null)
@@ -79,23 +84,16 @@ namespace EBot.Helpers
             await CreateEMessage(emessage);
         }
 
-        public static async Task CreateEMessage(EMessage emessage, EStatus senderStatus)
+        public static async Task CreateEMessage(EMessage emessage)
         {
             var message = await emessage.Context.Channel.SendMessageAsync(embed: GenerateEmbed(emessage).Build());
             ulong messageId = message.Id;
-            CreateEMessage(emessage.Context, emessage, message, messageId, senderStatus);
+            CreateEMessage(emessage.Context, emessage, message, messageId);
         }
 
-        public static async Task CreateEMessage(BotCommandContext context, EStatus senderStatus)
-        {
-            EMessage emessage = new EMessage(context, context.Bot.Options.DefaultUsers);
-            await CreateEMessage(emessage, senderStatus);
-        }
-
-        private static void CreateEMessage(BotCommandContext context, EMessage emessage, RestUserMessage message, ulong messageId, EStatus senderStatus)
+        private static void CreateEMessage(BotCommandContext context, EMessage emessage, RestUserMessage message, ulong messageId)
         {
             EMessages.Add(messageId, emessage);
-            UpdateEStatus(message.Id, message.Author.Id, senderStatus == null ? EStatus.FromState(EState.Unknown) : senderStatus);
             ReactionMessageHelper.CreateReactionMessage(
                 context,
                 message,
@@ -120,7 +118,7 @@ namespace EBot.Helpers
                     EMessages.Remove(messageId);
                 }
             );
-
+            
             Func<ReactionMessage, SocketReaction, Task> generateTimeOffsetAction(TimeSpan offset)
             {
                 return (rm, sr) =>
@@ -179,8 +177,13 @@ namespace EBot.Helpers
             }
             catch { }
         }
+        
+        public static async Task UpdateEStatus(ulong messageId, ulong userId, EState state)
+        {
+            await UpdateEStatus(messageId, userId, EStatus.FromState(state));
+        }
 
-        public static async Task UpdateEStatus(ulong messageId, ulong userId, EState state, DateTimeOffset? timeAvailable = null)
+        public static async Task UpdateEStatus(ulong messageId, ulong userId, EState state, DateTimeOffset timeAvailable)
         {
             await UpdateEStatus(messageId, userId, EStatus.FromState(state, timeAvailable));
         }
@@ -276,7 +279,7 @@ namespace EBot.Helpers
                     [EState.Done] = new Color(0x9241d4)
                 };
 
-                List<Color> colors = new List<Color>();
+                var colors = new List<Color>();
                 foreach (var status in message.Statuses.Values)
                 {
                     if (status.State == EState.AvailableLater)
@@ -324,25 +327,24 @@ namespace EBot.Helpers
     {
         public static EStatus Read(ASTNode node)
         {
-            switch (node.Symbol.ID)
+            return node.Symbol.ID switch
             {
-                case EParser.ID.VariableTime: return ReadTime(node);
-                case EParser.ID.VariableIn: return ReadTime(node);
-            }
-
-            return EStatus.FromState(EState.Unknown);
+                EParser.ID.VariableTime => ReadTime(node),
+                EParser.ID.VariableIn => ReadIn(node),
+                EParser.ID.VariableNow => EStatus.FromState(EState.Available),
+                _ => EStatus.FromState(EState.Unknown)
+            };
         }
 
         public static EStatus ReadIn(ASTNode node)
         {
-            var child = node.Children.First();
+            ASTNode child = node.Children.First();
 
-            switch (child.Symbol.ID)
+            return child.Symbol.ID switch
             {
-                case EParser.ID.VariableN: return Read(child);
-            }
-            
-            return EStatus.FromState(EState.Unknown);
+                EParser.ID.VariableN => Read(child),
+                _ => EStatus.FromState(EState.Unknown)
+            };
         }
 
         public static EStatus ReadN(ASTNode node)
@@ -358,9 +360,9 @@ namespace EBot.Helpers
         
         public  static EStatus ReadTime(ASTNode node)
         {
-            var children = node.Children;
+            ASTFamily children = node.Children;
 
-            var time = children.First();
+            ASTNode time = children.First();
 
             TimeSpan ampm = DateTime.Now.Hour < 12 ? new TimeSpan(0, 0, 0) : new TimeSpan(12, 0, 0);
 

@@ -14,12 +14,12 @@ namespace EBot.Models
         public DateTimeOffset? TargetTime { get; }
         public ulong Creator { get; }
 
-        public EMessage(BotCommandContext context, DateTimeOffset? targetTime, IEnumerable<ulong> users)
+        public EMessage(BotCommandContext context, EStatus senderStatus, IEnumerable<ulong> users)
         {
             Creator = context.User.Id;
             Context = context;
-            TargetTime = targetTime;
-            Statuses = new Dictionary<ulong, EStatus>();
+            TargetTime = senderStatus?.TimeAvailable;
+            Statuses = new Dictionary<ulong, EStatus> { { Creator, senderStatus } };
             CreatedTimestamp = DateTimeOffset.Now;
             foreach (ulong user in users)
             {
@@ -40,17 +40,19 @@ namespace EBot.Models
             TimeUpdated = DateTimeOffset.Now;
         }
 
-        public static EStatus FromState(EState state, DateTimeOffset? timeAvailable = null)
+        public static EStatus FromState(EState state)
         {
-            DateTimeOffset time = timeAvailable ?? DateTimeOffset.MaxValue;
+            return FromState(state, DateTimeOffset.MaxValue);
+        }
+        
+        public static EStatus FromState(EState state, DateTimeOffset timeAvailable)
+        {
             return new EStatus
             {
                 State = state,
-                TimeAvailable = state == EState.AvailableLater ? time : DateTimeOffset.Now
+                TimeAvailable = state == EState.AvailableLater ? timeAvailable : DateTimeOffset.Now
             };
         }
-
-        public override string ToString() => $"{State}: {TimeAvailable}";
     }
 
     public enum EState
