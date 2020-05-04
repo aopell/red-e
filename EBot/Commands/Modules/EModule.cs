@@ -13,10 +13,10 @@ namespace EBot.Commands.Modules
         [Command("e"), Summary("Gets the latest e message and creates a new copy")]
         public async Task GetLatestEMessage()
         {
-            var emessage = EMessageHelper.EMessages.Where(kvp => kvp.Value.Context.Channel.Id == Context.Channel.Id).OrderByDescending(kvp => kvp.Value.CreatedTimestamp.Ticks).FirstOrDefault().Value;
-            if (emessage == null) throw new CommandExecutionException("There are no e messages currently in this channel");
+            var emessage = EMessageHelper.EMessages.GetValueOrDefault(Context.Channel.Id);
+            if (emessage == null) throw new CommandExecutionException("There is no e message currently in this channel");
 
-            await EMessageHelper.CreateEMessage(emessage);
+            await EMessageHelper.CreateEMessage(Context, emessage);
         }
     }
 }

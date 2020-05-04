@@ -54,11 +54,11 @@ namespace EBot.Helpers
             // TODO: Update time of sender based on receieved message
             DateTimeOffset? targetTime = null;
 
-            bool existing = EMessages.Any(kvp => kvp.Value.Context.Channel.Id == context.Channel.Id);
+            bool existing = EMessages.ContainsKey(context.Channel.Id);
 
             if (existing)
             {
-                var confirmMessage = await context.Channel.SendMessageAsync("There is already an active e message in this channel. Create another?");
+                var confirmMessage = await context.Channel.SendMessageAsync("There is already an active e message in this channel. Replace it?");
                 ReactionMessageHelper.CreateConfirmReactionMessage(context, confirmMessage, (rm, sr) => Task.WhenAll(CreateEMessage(context, targetTime), confirmMessage.DeleteAsync()), (rm, sr) => confirmMessage.DeleteAsync());
                 return;
             }
@@ -68,30 +68,31 @@ namespace EBot.Helpers
 
         public static async Task CreateEMessage(BotCommandContext context, DateTimeOffset? targetTime)
         {
-            EMessage emessage = new EMessage(context, targetTime, context.Bot.Options.DefaultUsers);
+            EMessage emessage = new EMessage(context.User.Id, context.Channel.Id, context.Guild.Id, targetTime, context.Bot.Options.DefaultUsers);
 
-            var role = emessage.Context.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
+            var role = emessage.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
             if (role != null)
             {
                 foreach (ulong userId in emessage.Statuses.Keys)
                 {
-                    _ = emessage.Context.Guild.GetUser(userId).RemoveRoleAsync(role);
+                    _ = emessage.Guild.GetUser(userId).RemoveRoleAsync(role);
                 }
             }
 
-            await CreateEMessage(emessage);
+            await CreateEMessage(context, emessage);
         }
 
-        public static async Task CreateEMessage(EMessage emessage)
+        public static async Task CreateEMessage(BotCommandContext context, EMessage emessage)
         {
-            var message = await emessage.Context.Channel.SendMessageAsync(embed: GenerateEmbed(emessage).Build());
+            var message = await emessage.Channel.SendMessageAsync(embed: GenerateEmbed(emessage).Build());
             ulong messageId = message.Id;
-            CreateEMessage(emessage.Context, emessage, message, messageId);
+            CreateEMessage(context, emessage, message, messageId);
         }
 
         private static void CreateEMessage(BotCommandContext context, EMessage emessage, RestUserMessage message, ulong messageId)
         {
-            EMessages.Add(messageId, emessage);
+            emessage.MessageIds.Add(messageId);
+            EMessages[emessage.Channel.Id] = emessage;
             ReactionMessageHelper.CreateReactionMessage(
                 context,
                 message,
@@ -121,25 +122,22 @@ namespace EBot.Helpers
             {
                 return (rm, sr) =>
                 {
-                    EStatus s = EMessages[rm.Message.Id].Statuses.GetValueOrDefault(sr.UserId, EStatus.FromState(EState.Unknown));
-                    return UpdateEStatus(rm.Message.Id, sr.UserId, EState.AvailableLater, (s.State == EState.AvailableLater ? s.TimeAvailable : DateTimeOffset.Now) + offset);
+                    EStatus s = EMessages[rm.Context.Channel.Id].Statuses.GetValueOrDefault(sr.UserId, EStatus.FromState(EState.Unknown));
+                    return UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.AvailableLater, (s.State == EState.AvailableLater ? s.TimeAvailable : DateTimeOffset.Now) + offset);
                 };
             }
 
             Func<ReactionMessage, SocketReaction, Task> generateTimeSetAction(DateTimeOffset time)
             {
-                return (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.AvailableLater, time);
+                return (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.AvailableLater, time);
             }
         }
 
         public static void UpdateEMessages()
         {
-            foreach (ulong id in EMessages.Keys.ToArray())
+            foreach (var emessage in EMessages.Values.ToArray())
             {
-                var emessage = EMessages.GetValueOrDefault(id);
-                if (emessage == null) continue;
-
-                var role = emessage.Context.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
+                var role = emessage.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
                 foreach (ulong userId in emessage.Statuses.Keys.ToArray())
                 {
                     var status = emessage.Statuses.GetValueOrDefault(userId);
@@ -149,36 +147,39 @@ namespace EBot.Helpers
                     {
                         status.ShamedForLateness = true;
                         string shameMessage = DiscordBot.MainInstance.Options.ShameMessages.OrderBy(x => Guid.NewGuid()).First();
-                        _ = emessage.Context.Channel.SendMessageAsync(string.Format(shameMessage, $"<@{userId}>"));
-                        _ = emessage.Context.Guild.GetUser(userId).AddRoleAsync(role);
+                        _ = emessage.Channel.SendMessageAsync(string.Format(shameMessage, $"<@{userId}>"));
+                        _ = emessage.Guild.GetUser(userId).AddRoleAsync(role);
                     }
                 }
 
-                _ = UpdateEMessage(id, emessage);
+                _ = UpdateEMessage(emessage);
 
-                if (DateTimeOffset.Now - EMessages[id].CreatedTimestamp > TimeSpan.FromHours(12))
+                if (DateTimeOffset.Now - emessage.CreatedTimestamp > TimeSpan.FromHours(12))
                 {
-                    EMessages.Remove(id);
+                    EMessages[emessage.ChannelId] = null;
                 }
             }
         }
 
-        private static async Task UpdateEMessage(ulong message, EMessage emessage)
+        private static async Task UpdateEMessage(EMessage emessage)
         {
-            try
+            foreach (ulong message in emessage.MessageIds)
             {
-                var msg = (IUserMessage)await emessage.Context.Channel.GetMessageAsync(message);
-                if (msg != null)
+                try
                 {
-                    await msg.ModifyAsync((props) => props.Embed = GenerateEmbed(emessage).Build());
+                    var msg = (IUserMessage)await emessage.Channel.GetMessageAsync(message);
+                    if (msg != null)
+                    {
+                        await msg.ModifyAsync((props) => props.Embed = GenerateEmbed(emessage).Build());
+                    }
                 }
+                catch { }
             }
-            catch { }
         }
 
-        public static async Task UpdateEStatus(ulong messageId, ulong userId, EState state, DateTimeOffset? timeAvailable = null)
+        public static async Task UpdateEStatus(ulong channelId, ulong userId, EState state, DateTimeOffset? timeAvailable = null)
         {
-            EMessage emessage = EMessages.GetValueOrDefault(messageId);
+            EMessage emessage = EMessages.GetValueOrDefault(channelId);
             if (emessage == null) return;
 
             await DiscordBot.MainInstance.Log(new LogMessage(LogSeverity.Info, "UpdateEStatus", $"{userId} updated estatus to {state} at time {timeAvailable}"));
@@ -186,16 +187,16 @@ namespace EBot.Helpers
             var status = EStatus.FromState(state, timeAvailable);
             emessage.Statuses[userId] = status;
 
-            var role = emessage.Context.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
+            var role = emessage.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
             if (role != null)
             {
                 if (status.State == EState.Available)
                 {
-                    _ = emessage.Context.Guild.GetUser(userId).AddRoleAsync(role);
+                    _ = emessage.Guild.GetUser(userId).AddRoleAsync(role);
                 }
                 else
                 {
-                    _ = emessage.Context.Guild.GetUser(userId).RemoveRoleAsync(role);
+                    _ = emessage.Guild.GetUser(userId).RemoveRoleAsync(role);
                 }
             }
 
@@ -214,11 +215,11 @@ namespace EBot.Helpers
         {
             EmbedBuilder builder = new EmbedBuilder();
             builder.Title = "eeee?";
-            builder.Description = $"{message.Context.NicknameOrUsername(message.Creator)} proposes that we eeee{(message.TargetTime == null ? "" : $" at {message.TargetTime:h:mm tt}")}";
+            builder.Description = $"{message.Creator.NicknameOrUsername()} proposes that we eeee{(message.ProposedTime == null ? "" : $" at {message.ProposedTime:h:mm tt}")}";
 
             foreach (ulong user in message.Statuses.Keys.ToArray())
             {
-                string name = message.Context.NicknameOrUsername(user);
+                string name = message.Creator.NicknameOrUsername();
                 if (name == null) continue;
 
                 builder.AddField(name, getStatusMessage(message.Statuses[user]));

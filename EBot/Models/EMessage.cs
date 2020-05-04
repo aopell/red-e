@@ -1,24 +1,37 @@
-﻿using EBot.Commands;
+﻿using Discord;
+using Discord.WebSocket;
+using EBot.Commands;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using E;
 
 namespace EBot.Models
 {
     public class EMessage
     {
-        public BotCommandContext Context { get; set; }
-        public Dictionary<ulong, EStatus> Statuses { get; set; }
-        public DateTimeOffset CreatedTimestamp { get; }
-        public DateTimeOffset? TargetTime { get; }
-        public ulong Creator { get; }
+        public ulong CreatorId { get; private set; }
+        public ulong ChannelId { get; private set; }
+        public ulong GuildId { get; private set; }
+        public List<ulong> MessageIds { get; private set; }
+        public Dictionary<ulong, EStatus> Statuses { get; private set; }
+        public DateTimeOffset CreatedTimestamp { get; private set; }
+        public DateTimeOffset? ProposedTime { get; private set; }
 
-        public EMessage(BotCommandContext context, DateTimeOffset? targetTime, IEnumerable<ulong> users)
+        [JsonIgnore]
+        public IUser Creator => DiscordBot.MainInstance.Client.GetUser(CreatorId);
+        [JsonIgnore]
+        public ISocketMessageChannel Channel => (ISocketMessageChannel)DiscordBot.MainInstance.Client.GetChannel(ChannelId);
+        [JsonIgnore]
+        public SocketGuild Guild => DiscordBot.MainInstance.Client.GetGuild(GuildId);
+
+        public EMessage(ulong creatorId, ulong channelId, ulong guildId, DateTimeOffset? proposedTime, IEnumerable<ulong> users)
         {
-            Creator = context.User.Id;
-            Context = context;
-            TargetTime = targetTime;
+            CreatorId = creatorId;
+            ChannelId = channelId;
+            GuildId = guildId;
+            MessageIds = new List<ulong>();
+            ProposedTime = proposedTime;
             Statuses = new Dictionary<ulong, EStatus>();
             CreatedTimestamp = DateTimeOffset.Now;
             foreach (ulong user in users)
@@ -26,6 +39,8 @@ namespace EBot.Models
                 Statuses.Add(user, EStatus.FromState(EState.Unknown));
             }
         }
+
+        private EMessage() { /* For JSON Serialization */ }
     }
 
     public class EStatus
