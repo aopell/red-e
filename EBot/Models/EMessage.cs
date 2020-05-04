@@ -55,6 +55,7 @@ namespace EBot.Models
     {
         Unknown,
         Unavailable,
+        Maybe,
         AvailableLater,
         Available,
         Ready,

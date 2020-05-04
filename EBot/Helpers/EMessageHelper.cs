@@ -101,8 +101,9 @@ namespace EBot.Helpers
                 actions: new List<(string, Func<ReactionMessage, SocketReaction, Task>)>
                 {
                     ("<:available:706270615312662568>", (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.Available)),
-                    ("<:unavailable:706006786842296480>", (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.Unavailable)),
-                    ("<:fiveminutes:706000163738484756>", generateTimeOffsetAction(TimeSpan.FromMinutes(0.1))),
+                    ("<:maybe:706702223446376517>", (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.Maybe)),
+                    ("<:unavailable:706702240467124345>", (rm, sr) => UpdateEStatus(rm.Message.Id, sr.UserId, EState.Unavailable)),
+                    ("<:fiveminutes:706000163738484756>", generateTimeOffsetAction(TimeSpan.FromMinutes(5))),
                     ("<:fifteenminutes:706000163562323979>", generateTimeOffsetAction(TimeSpan.FromMinutes(15))),
                     ("<:onehour:706000163688153088>", generateTimeOffsetAction(TimeSpan.FromHours(1))),
                     ("<:twohours:706000163596009514>", generateTimeOffsetAction(TimeSpan.FromHours(2))),
@@ -223,6 +224,7 @@ namespace EBot.Helpers
                 builder.AddField(name, getStatusMessage(message.Statuses[user]));
             }
 
+            builder.Color = getEmbedColor();
             builder.WithFooter("Last Updated");
             builder.WithCurrentTimestamp();
 
@@ -232,11 +234,12 @@ namespace EBot.Helpers
             {
                 return status.State switch
                 {
-                    EState.Unavailable => "<:unavailable:706006786842296480> Unavailable",
+                    EState.Unavailable => "<:unavailable:706702240467124345> Unavailable",
+                    EState.Maybe => "<:maybe:706702223446376517> Maybe Later",
                     EState.AvailableLater => getAvailableLaterStatus(status.TimeAvailable),
                     EState.Available => "<:available:706270615312662568> Available Now",
                     EState.Ready => "<:ready:706270984973451295> Ready (In Voice)",
-                    EState.Done => "🔵 Done",
+                    EState.Done => $"<:sleep:706705461486944348> {(status.TimeUpdated.Hour >= 20 || status.TimeUpdated.Hour <= 5 ? "Sleeeep" : "eeeed")}",
                     _ => "<:unknown:706271972983701524> Unknown",
                 };
             }
@@ -251,6 +254,60 @@ namespace EBot.Helpers
                 }
 
                 return $"{(late ? "⏰" : "⌛")} {(span.TotalHours >= 1 ? $"{(int)span.TotalHours} hour{(span.TotalHours >= 2 ? "s" : "")} " : "")}{span.Minutes} min{(span.Minutes != 1 ? "s" : "")}{(late ? " late" : "")}";
+            }
+
+            Color getEmbedColor()
+            {
+                var colorMap = new Dictionary<EState, Color>
+                {
+                    [EState.Unknown] = new Color(0x7a7a7a),
+                    [EState.Unavailable] = new Color(0xef5a73),
+                    [EState.Maybe] = new Color(0xffac33),
+                    [EState.Available] = new Color(0x226699),
+                    [EState.Ready] = new Color(0x2cd261),
+                    [EState.Done] = new Color(0x9241d4)
+                };
+
+                List<Color> colors = new List<Color>();
+                foreach (var status in message.Statuses.Values)
+                {
+                    if (status.State == EState.AvailableLater)
+                    {
+                        double weight = (double)(DateTimeOffset.Now - status.TimeUpdated).Ticks / (status.TimeAvailable - status.TimeUpdated).Ticks;
+                        colors.Add(getWeightedAverageColor(colorMap[EState.Maybe], colorMap[EState.Available], weight));
+                    }
+                    else
+                    {
+                        colors.Add(colorMap[status.State]);
+                    }
+                }
+
+                return getAverageColor(colors);
+            }
+
+            static Color getWeightedAverageColor(Color c1, Color c2, double w)
+            {
+                w = Math.Clamp(w, 0d, 1d);
+                return new Color((byte)Math.Sqrt(c1.R * c1.R * (1 - w) + c2.R * c2.R * w), (byte)Math.Sqrt(c1.G * c1.G * (1 - w) + c2.G * c2.G * w), (byte)Math.Sqrt(c1.B * c1.B * (1 - w) + c2.B * c2.B * w));
+            }
+
+            static Color getAverageColor(IEnumerable<Color> colors)
+            {
+                double r = 0;
+                double g = 0;
+                double b = 0;
+                int count = 0;
+                foreach (Color color in colors)
+                {
+                    count++;
+                    r += Math.Pow(color.R, 2);
+                    g += Math.Pow(color.G, 2);
+                    b += Math.Pow(color.B, 2);
+                }
+                r /= count;
+                g /= count;
+                b /= count;
+                return new Color((byte)Math.Sqrt(r), (byte)Math.Sqrt(g), (byte)Math.Sqrt(b));
             }
         }
     }
