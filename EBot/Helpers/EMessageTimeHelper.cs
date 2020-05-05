@@ -37,9 +37,6 @@ namespace EBot.Helpers
                 EParser.ID.VariableTime => ReadAtTime(node),
                 EParser.ID.VariableIn => ReadIn(node),
                 EParser.ID.VariableNow => EStatus.FromState(EState.Available),
-                EParser.ID.VariableSoon => Soon,
-                EParser.ID.VariableSoonish => Soonish,
-                ELexer.ID.TerminalTonight => AtTime(10),
                 _ => Unknown
             };
         }
@@ -63,7 +60,7 @@ namespace EBot.Helpers
             return node.Children[1].Symbol.ID switch
             {
                 ELexer.ID.TerminalAnhour => InHours(1),
-                ELexer.ID.TerminalAminute => InMinutes(1),
+                ELexer.ID.TerminalAminute => InMinutes(5),
                 _ => Unknown
             };
         }

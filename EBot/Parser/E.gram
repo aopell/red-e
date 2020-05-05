@@ -7,8 +7,8 @@ grammar E
   }
   terminals
   {
-    fragment MSG -> .* ' ';
-    WHITE_SPACE -> U+0020 | U+0009 | U+000B | U+000C | ' ';
+    fragment MSG -> .*;
+    WHITE_SPACE -> U+0020 | U+0009 | U+000B | U+000C;
     SEPARATOR   -> WHITE_SPACE+;
 
     YFINAL -> 'y' | 'e'+;
@@ -19,7 +19,8 @@ grammar E
 
     context like { LIKE -> ' like ' | ' mayb' 'e'+ ' ' | ' '; }
 
-    TONIGHT -> ' tonight' | ' later' | (' ' 'e'+)? 'ventual' 'l'? YFINAL;
+    TONIGHT -> ' tonight';
+    LATER -> ' later' | (' ' 'e'+)? 'ventual' 'l'? YFINAL | ' at some point';
 
     context min {
       MINS -> ' min' ('utes' | 's'?);
@@ -58,7 +59,7 @@ grammar E
     }
 
     context start {
-      E -> MSG? ('e' | 'E')+;
+      E -> (.* ' ')? ('e' | 'E')+;
     }
   }
   rules
@@ -81,6 +82,6 @@ grammar E
     time -> #time { TEXTTIME | HOUR (':'! MINUTE)? };
     at -> #at { AT_OR_BEFORE! } #like { LIKE! } (time! #range { RANGE! })? time^;
     
-    prompt -> #start { E! } (at | in | soon | soonish | TONIGHT | now)^ ' '!? '?'!+;
+    prompt -> #start { E } (at | in | soon | soonish | TONIGHT | LATER | now) ' '!? '?'!+;
   }
 }

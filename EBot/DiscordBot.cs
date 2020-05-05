@@ -85,7 +85,9 @@ namespace EBot
             //     "can anyone e at maybe 9-9:30???",
             //     "anyone eeen maybe a while?",
             //     "een like 20ish?",
-            //     "ee in maybeee an hourish?"
+            //     "ee in maybeee an hourish?",
+            //     "how can that be?",
+            //     "can anyone e?"
             // };
             //
             // foreach (var s in test)
