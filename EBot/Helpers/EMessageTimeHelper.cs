@@ -72,7 +72,12 @@ namespace EBot.Helpers
         {
             ASTNode number = node.Children[0];
 
-            int time = int.Parse(number.Value);
+            int time = number.Symbol.ID switch
+            {
+                ELexer.ID.TerminalInteger => int.Parse(number.Value),
+                ELexer.ID.TerminalNumber => Number(number.Value),
+                _ => -1
+            };
             
             return node.Children[1].Symbol.ID switch
             {
@@ -118,6 +123,26 @@ namespace EBot.Helpers
                 "noon" => TimeSpan.FromHours(12),
                 "midnight" => TimeSpan.FromHours(12),
                 _ => TimeSpan.FromHours(-1)
+            };
+        }
+        
+        public static int Number(string number)
+        {
+            return number switch
+            {
+                "one" => 1,
+                "two" => 2,
+                "three" => 3,
+                "four" => 4,
+                "five" => 5,
+                "six" => 6,
+                "seven" => 7,
+                "eight" => 8,
+                "nine" => 9,
+                "ten" => 10,
+                "twenty" => 20,
+                "thirty" => 30,
+                _ => -1,
             };
         }
     }

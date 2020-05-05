@@ -24,6 +24,10 @@ grammar E
     context min {
       MINS -> ' min' ('utes' | 's'?);
     }
+
+    context ish {
+      ISH -> ' '? 'ish';
+    }
     
     context soon {
       INSOON -> 'a ' [^?]+;
@@ -54,7 +58,7 @@ grammar E
     }
 
     context start {
-      E -> MSG? ' ' ('e' | 'E')+;
+      E -> MSG? ('e' | 'E')+;
     }
   }
   rules
@@ -65,8 +69,8 @@ grammar E
 
     nminutes -> #min { MINS! } | ;
     nhours -> ('hr'! | ' hour'!) 's'!?;
-    n -> (nn! #range { RANGE! })? nn (nhours | nminutes);
-    a -> #one { AMINUTE | ANHOUR };
+    n -> (nn! #range { RANGE! })? nn #ish { ISH!? } (nhours | nminutes);
+    a -> #one { AMINUTE | ANHOUR } #ish { ISH!? };
 
     in -> #in { WITHIN! } #like { LIKE! } (n | a | #soon { INSOON } | INSOONISH);
 

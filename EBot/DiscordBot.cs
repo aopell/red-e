@@ -23,86 +23,88 @@ namespace EBot
         public static async Task Main()
         {
             #region Parser Test
-            //var test = new string[]
-            //{
-            //    "can anyone e?",
-            //    "e?",
-            //    "e like now?",
-            //    "eeeeee?",
-            //    "eee now?",
-            //    "e soon?",
-            //    "e in like an hour?",
-            //    "e within like 20?",
-            //    "eee before like ten?",
-            //    "e before noon?",
-            //    "e within an hour?",
-            //    "eeeeeee soon?",
-            //    "e tonight?",
-            //    "eee tonight?",
-            //    "e later?",
-            //    "eeee later?",
-            //    "eeee in 10?",
-            //    "ee in 5?",
-            //    "e in an hour?",
-            //    "ee at 8?",
-            //    "eee at six?",
-            //    "eee at noon?",
-            //    "e at midnight?",
-            //    "eee at 11:30 ?",
-            //    "ee at 8:30 ?",
-            //    "eee eventually ?",
-            //    "e eventualeee ?",
-            //    "eee in 2 hours?",
-            //    "eee in three hours?",
-            //    "e in 20 mins?",
-            //    "eee in ten minutes?",
-            //    "eee in 30 minutes?",
-            //    "ee in a few?",
-            //    "eee in a while?",
-            //    "eeee in a bit?",
-            //    "eee in a minute?",
-            //    "ee in a few mins?",
-            //    "eee in a few minutes?",
-            //    "eee in like 10 - 20 ?",
-            //    "eee in 5 - 15 ?",
-            //    "eee in 5-15?",
-            //    "eeeeeeeeeeeeeeeee at like 9-10?",
-            //    "eeeeeventualeeeee?",
-            //    "e eventualleeeeee?",
-            //    "e eeeeeventualeeee?",
-            //    "eeen maybeeee a bit?",
-            //    "eeen like a while?",
-            //    "eeeeeeeee in maybeeeee a few?",
-            //    "eeee in a couple mins?",
-            //    "eeeen a flash?",
-            //    "eee in like a hot second?",
-            //    "eee sooooooooooon?",
-            //    "y'all wanna e?",
-            //    "can anyone e tonight?",
-            //    "any of yall motherfuckers actually want to e?",
-            //    "how about eeeeen like 20?",
-            //    "y'all want to play something eeeeventualleeee?",
-            //    "can anyone e at maybe 9-9:30???",
-            //    "anyone eeen maybe a while?",
-            //};
-
-            //foreach (var s in test)
-            //{
-            //    Console.WriteLine(s);
-            //    var parse = new E.EParser(new E.ELexer(s)).Parse();
-            //    if (parse.IsSuccess)
-            //    {
-            //        Print(parse.Root, new bool[] { });
-            //    }
-            //    else
-            //    {
-            //        foreach (var e in parse.Errors)
-            //        {
-            //            Console.WriteLine(e.ToString());
-            //        }
-            //    }
-            //    Console.WriteLine();
-            //}
+            // var test = new string[]
+            // {
+            //     "can anyone e?",
+            //     "e?",
+            //     "e like now?",
+            //     "eeeeee?",
+            //     "eee now?",
+            //     "e soon?",
+            //     "e in like an hour?",
+            //     "e within like 20?",
+            //     "eee before like ten?",
+            //     "e before noon?",
+            //     "e within an hour?",
+            //     "eeeeeee soon?",
+            //     "e tonight?",
+            //     "eee tonight?",
+            //     "e later?",
+            //     "eeee later?",
+            //     "eeee in 10?",
+            //     "ee in 5?",
+            //     "e in an hour?",
+            //     "ee at 8?",
+            //     "eee at six?",
+            //     "eee at noon?",
+            //     "e at midnight?",
+            //     "eee at 11:30 ?",
+            //     "ee at 8:30 ?",
+            //     "eee eventually ?",
+            //     "e eventualeee ?",
+            //     "eee in 2 hours?",
+            //     "eee in three hours?",
+            //     "e in 20 mins?",
+            //     "eee in ten minutes?",
+            //     "eee in 30 minutes?",
+            //     "ee in a few?",
+            //     "eee in a while?",
+            //     "eeee in a bit?",
+            //     "eee in a minute?",
+            //     "ee in a few mins?",
+            //     "eee in a few minutes?",
+            //     "eee in like 10 - 20 ?",
+            //     "eee in 5 - 15 ?",
+            //     "eee in 5-15?",
+            //     "eeeeeeeeeeeeeeeee at like 9-10?",
+            //     "eeeeeventualeeeee?",
+            //     "e eventualleeeeee?",
+            //     "e eeeeeventualeeee?",
+            //     "eeen maybeeee a bit?",
+            //     "eeen like a while?",
+            //     "eeeeeeeee in maybeeeee a few?",
+            //     "eeee in a couple mins?",
+            //     "eeeen a flash?",
+            //     "eee in like a hot second?",
+            //     "eee sooooooooooon?",
+            //     "y'all wanna e?",
+            //     "can anyone e tonight?",
+            //     "any of yall motherfuckers actually want to e?",
+            //     "how about eeeeen like 20?",
+            //     "y'all want to play something eeeeventualleeee?",
+            //     "can anyone e at maybe 9-9:30???",
+            //     "anyone eeen maybe a while?",
+            //     "een like 20ish?",
+            //     "ee in maybeee an hourish?"
+            // };
+            //
+            // foreach (var s in test)
+            // {
+            //     Console.WriteLine(s);
+            //     var parse = new E.EParser(new E.ELexer(s)).Parse();
+            //     if (parse.IsSuccess)
+            //     {
+            //         Print(parse.Root, new bool[] { });
+            //     }
+            //     else
+            //     {
+            //         foreach (var e in parse.Errors)
+            //         {
+            //             Console.WriteLine(e.ToString());
+            //         }
+            //     }
+            //     Console.WriteLine();
+            // }
             #endregion
 
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
