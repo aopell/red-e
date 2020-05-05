@@ -8,6 +8,12 @@ namespace EBot.Helpers
 {
     public static class EMessageTimeHelper
     {
+        public static EStatus Soon => InMinutes(10);
+        public static EStatus Soonish => InMinutes(30);
+        
+        public static EStatus InMinutes(int minutes) => EStatus.FromState(EState.AvailableLater, DateTimeOffset.Now + TimeSpan.FromMinutes(minutes));
+        public static EStatus InHours(int hours) => EStatus.FromState(EState.AvailableLater, DateTimeOffset.Now + TimeSpan.FromHours(hours));
+
         public static EStatus Read(ASTNode node)
         {
             return node.Symbol.ID switch
@@ -26,6 +32,19 @@ namespace EBot.Helpers
             return child.Symbol.ID switch
             {
                 EParser.ID.VariableN => ReadN(child),
+                EParser.ID.VariableA => ReadA(child),
+                ELexer.ID.TerminalInsoon => Soon,
+                ELexer.ID.TerminalInsoonish => Soonish,
+                _ => EStatus.FromState(EState.Unknown)
+            };
+        }
+
+        public static EStatus ReadA(ASTNode node)
+        {
+            return node.Children[1].Symbol.ID switch
+            {
+                ELexer.ID.TerminalAnhour => InHours(1),
+                ELexer.ID.TerminalAminute => InMinutes(1),
                 _ => EStatus.FromState(EState.Unknown)
             };
         }
@@ -35,10 +54,13 @@ namespace EBot.Helpers
             ASTNode number = node.Children[0];
 
             int time = int.Parse(number.Value);
-
-            ASTNode timeInterval = node.Children[1];
             
-            return EStatus.FromState(EState.AvailableLater, DateTimeOffset.Now + (timeInterval.Symbol.ID == EParser.ID.VariableNhours ? TimeSpan.FromHours(time) : TimeSpan.FromMinutes(time)));
+            return node.Children[1].Symbol.ID switch
+            {
+                EParser.ID.VariableNhours => InHours(time),
+                EParser.ID.VariableNminutes => InMinutes(time),
+                _ => EStatus.FromState(EState.Unknown)
+            };
         }
         
         public  static EStatus ReadTime(ASTNode node)
