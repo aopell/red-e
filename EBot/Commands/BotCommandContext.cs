@@ -15,13 +15,5 @@ namespace EBot.Commands
         {
             Bot = bot;
         }
-
-        public string NicknameOrUsername(ulong userId) => NicknameOrUsername(Guild.GetUser(userId));
-
-        public string NicknameOrUsername(IUser user)
-        {
-            if (user == null) return null;
-            return user is IGuildUser gu && !string.IsNullOrEmpty(gu.Nickname) ? gu.Nickname : user.Username;
-        }
     }
 }
