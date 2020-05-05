@@ -9,19 +9,38 @@ namespace EBot.Helpers
     public static class EMessageTimeHelper
     {
         public static EStatus Soon => InMinutes(10);
-        public static EStatus Soonish => InMinutes(30);
         
+        public static EStatus Soonish => InMinutes(30);
+
+        public static EStatus Unknown => EStatus.FromState(EState.Unknown);
+        
+        public static EStatus AtTime(int hour, int minute = 0)
+        {
+            return AtTime(new TimeSpan(hour, minute, 0));
+        }
+        
+        public static EStatus AtTime(TimeSpan time)
+        {
+            TimeSpan ampm = DateTime.Now.Hour < 12 ? new TimeSpan(0, 0, 0) : new TimeSpan(12, 0, 0);
+
+            return EStatus.FromState(EState.AvailableLater, DateTime.Today + ampm + time);
+        }
+            
         public static EStatus InMinutes(int minutes) => EStatus.FromState(EState.AvailableLater, DateTimeOffset.Now + TimeSpan.FromMinutes(minutes));
+        
         public static EStatus InHours(int hours) => EStatus.FromState(EState.AvailableLater, DateTimeOffset.Now + TimeSpan.FromHours(hours));
 
         public static EStatus Read(ASTNode node)
         {
             return node.Symbol.ID switch
             {
-                EParser.ID.VariableTime => ReadTime(node),
+                EParser.ID.VariableTime => ReadAtTime(node),
                 EParser.ID.VariableIn => ReadIn(node),
                 EParser.ID.VariableNow => EStatus.FromState(EState.Available),
-                _ => EStatus.FromState(EState.Unknown)
+                EParser.ID.VariableSoon => Soon,
+                EParser.ID.VariableSoonish => Soonish,
+                ELexer.ID.TerminalTonight => AtTime(10),
+                _ => Unknown
             };
         }
 
@@ -35,7 +54,7 @@ namespace EBot.Helpers
                 EParser.ID.VariableA => ReadA(child),
                 ELexer.ID.TerminalInsoon => Soon,
                 ELexer.ID.TerminalInsoonish => Soonish,
-                _ => EStatus.FromState(EState.Unknown)
+                _ => Unknown
             };
         }
 
@@ -45,7 +64,7 @@ namespace EBot.Helpers
             {
                 ELexer.ID.TerminalAnhour => InHours(1),
                 ELexer.ID.TerminalAminute => InMinutes(1),
-                _ => EStatus.FromState(EState.Unknown)
+                _ => Unknown
             };
         }
 
@@ -59,30 +78,25 @@ namespace EBot.Helpers
             {
                 EParser.ID.VariableNhours => InHours(time),
                 EParser.ID.VariableNminutes => InMinutes(time),
-                _ => EStatus.FromState(EState.Unknown)
+                _ => Unknown
             };
         }
 
-        public static EStatus ReadTime(ASTNode node)
+        public static EStatus ReadAtTime(ASTNode node)
         {
             ASTFamily children = node.Children;
 
-            ASTNode time = children.First();
+            ASTNode textOrHour = children.First();
 
-            TimeSpan ampm = DateTime.Now.Hour < 12 ? new TimeSpan(0, 0, 0) : new TimeSpan(12, 0, 0);
-
-            if (time.Symbol.ID == ELexer.ID.TerminalTexttime)
+            return textOrHour.Symbol.ID switch
             {
-                return EStatus.FromState(EState.AvailableLater, DateTime.Today + ampm + TexttimeOffset(time.Value));
-            }
-
-            int minute = 0;
-
-            if (children.Count == 2) minute = int.Parse(children.ElementAt(1).Value);
-
-            int hour = int.Parse(time.Value);
-
-            return EStatus.FromState(EState.AvailableLater, DateTime.Today + ampm + new TimeSpan(hour, minute, 0));
+                ELexer.ID.TerminalTexttime => AtTime(TexttimeOffset(textOrHour.Value)),
+                ELexer.ID.TerminalHour 
+                    when children.Count == 1 => AtTime(int.Parse(textOrHour.Value)),
+                ELexer.ID.TerminalHour
+                    when children.Count == 2 => AtTime(int.Parse(textOrHour.Value), int.Parse(children[1].Value)),
+                _ => Unknown
+            };
         }
 
         public static TimeSpan TexttimeOffset(string texttime)
