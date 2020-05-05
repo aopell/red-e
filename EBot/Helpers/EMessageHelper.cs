@@ -241,7 +241,7 @@ namespace EBot.Helpers
 
             foreach (ulong user in message.Statuses.Keys.ToArray())
             {
-                string name = message.Creator.NicknameOrUsername();
+                string name = message.Guild.GetUser(user).NicknameOrUsername();
                 if (name == null) continue;
 
                 builder.AddField(name, getStatusMessage(message.Statuses[user]));
