@@ -1,4 +1,4 @@
-﻿using Discord;
+using Discord;
 using Discord.WebSocket;
 using EBot.Commands;
 using Newtonsoft.Json;
@@ -25,18 +25,22 @@ namespace EBot.Models
         [JsonIgnore]
         public SocketGuild Guild => DiscordBot.MainInstance.Client.GetGuild(GuildId);
 
-        public EMessage(ulong creatorId, ulong channelId, ulong guildId, DateTimeOffset? proposedTime, IEnumerable<ulong> users)
+        public EMessage(ulong creatorId, ulong channelId, ulong guildId, EStatus senderStatus, IEnumerable<ulong> users)
         {
             CreatorId = creatorId;
             ChannelId = channelId;
             GuildId = guildId;
             MessageIds = new List<ulong>();
-            ProposedTime = proposedTime;
+            ProposedTime = senderStatus?.TimeAvailable;
             Statuses = new Dictionary<ulong, EStatus>();
             CreatedTimestamp = DateTimeOffset.Now;
             foreach (ulong user in users)
             {
-                Statuses.Add(user, EStatus.FromState(EState.Unknown));
+                Statuses[user] = EStatus.FromState(EState.Unknown);
+            }
+            if (senderStatus != null)
+            {
+                Statuses[creatorId] = senderStatus;
             }
         }
 
@@ -74,13 +78,14 @@ namespace EBot.Models
             ShamedForLateness = shamedForLateness;
         }
 
-        public static EStatus FromState(EState state, DateTimeOffset? timeAvailable = null)
+        public static EStatus FromState(EState state) => FromState(state, DateTimeOffset.MaxValue);
+
+        public static EStatus FromState(EState state, DateTimeOffset timeAvailable)
         {
-            DateTimeOffset time = timeAvailable ?? DateTimeOffset.MaxValue;
             return new EStatus
             {
                 State = state,
-                TimeAvailable = state == EState.AvailableLater ? time : DateTimeOffset.Now
+                TimeAvailable = state == EState.AvailableLater ? timeAvailable : DateTimeOffset.Now
             };
         }
     }

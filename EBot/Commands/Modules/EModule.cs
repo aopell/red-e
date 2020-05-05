@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+using Discord.Commands;
 using EBot.Helpers;
 using EBot.Tools;
 using System;

@@ -1,4 +1,4 @@
-﻿using Discord;
+using Discord;
 using Discord.Rest;
 using Discord.WebSocket;
 using Hime.Redist;
@@ -53,24 +53,25 @@ namespace EBot.Helpers
         {
             var context = new BotCommandContext(DiscordBot.MainInstance.Client, message, DiscordBot.MainInstance);
 
-            // TODO: Update time of sender based on receieved message
-            DateTimeOffset? targetTime = null;
-
             bool existing = EMessages.GetValueOrDefault(context.Channel.Id) != null;
+
+            var senderStatus = EMessageTimeHelper.Read(root);
 
             if (existing)
             {
                 var confirmMessage = await context.Channel.SendMessageAsync("There is already an active e message in this channel. Replace it?");
-                ReactionMessageHelper.CreateConfirmReactionMessage(context, confirmMessage, (rm, sr) => Task.WhenAll(CreateEMessage(context, targetTime), confirmMessage.DeleteAsync()), (rm, sr) => confirmMessage.DeleteAsync());
+                ReactionMessageHelper.CreateConfirmReactionMessage(context, confirmMessage,
+                                                                   (rm, sr) => Task.WhenAll(CreateEMessage(context, senderStatus), confirmMessage.DeleteAsync()),
+                                                                   (rm, sr) => confirmMessage.DeleteAsync());
                 return;
             }
 
-            await CreateEMessage(context, targetTime);
+            await CreateEMessage(context, senderStatus);
         }
 
-        public static async Task CreateEMessage(BotCommandContext context, DateTimeOffset? targetTime)
+        public static async Task CreateEMessage(BotCommandContext context, EStatus senderStatus)
         {
-            EMessage emessage = new EMessage(context.User.Id, context.Channel.Id, context.Guild.Id, targetTime, context.Bot.Options.DefaultUsers);
+            EMessage emessage = new EMessage(context.User.Id, context.Channel.Id, context.Guild.Id, senderStatus, context.Bot.Options.DefaultUsers);
 
             var role = emessage.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
             if (role != null)
@@ -93,6 +94,25 @@ namespace EBot.Helpers
 
         private static void CreateEMessage(BotCommandContext context, EMessage emessage, RestUserMessage message, ulong messageId)
         {
+            var actionButtons = new List<(string, Func<ReactionMessage, SocketReaction, Task>)>
+            {
+                (Strings.AvailableEmoji, (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Available)),
+                (Strings.MaybeEmoji, (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Maybe)),
+                (Strings.UnavailableEmoji, (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Unavailable)),
+                (Strings.FiveMinutesEmoji, generateTimeOffsetAction(TimeSpan.FromMinutes(5))),
+                (Strings.FifteenMinutesEmoji, generateTimeOffsetAction(TimeSpan.FromMinutes(15))),
+                (Strings.OneHourEmoji, generateTimeOffsetAction(TimeSpan.FromHours(1))),
+                (Strings.TwoHoursEmoji, generateTimeOffsetAction(TimeSpan.FromHours(2))),
+                (Strings.TenOClockEmoji, generateTimeSetAction(DateTimeOffset.Parse("10:00 PM"))),
+                (Strings.ElevenOClockEmoji, generateTimeSetAction(DateTimeOffset.Parse("11:00 PM"))),
+                (Strings.TwelveOClockEmoji,  generateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1)))
+            };
+
+            if (emessage.ProposedTime is DateTimeOffset dto && dto > DateTimeOffset.Now)
+            {
+                actionButtons.Insert(1, (Strings.AgreeEmoji, generateTimeSetAction(dto)));
+            }
+
             emessage.MessageIds.Add(messageId);
             EMessages[emessage.Channel.Id] = emessage;
             SaveEMessages();
@@ -102,19 +122,7 @@ namespace EBot.Helpers
                 allowMultipleReactions: true,
                 anyoneCanInteract: true,
                 timeout: (int)TimeSpan.FromHours(12).TotalMilliseconds,
-                actions: new List<(string, Func<ReactionMessage, SocketReaction, Task>)>
-                {
-                    (Strings.AvailableEmoji, (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Available)),
-                    (Strings.MaybeEmoji, (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Maybe)),
-                    (Strings.UnavailableEmoji, (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Unavailable)),
-                    (Strings.FiveMinutesEmoji, generateTimeOffsetAction(TimeSpan.FromMinutes(5))),
-                    (Strings.FifteenMinutesEmoji, generateTimeOffsetAction(TimeSpan.FromMinutes(15))),
-                    (Strings.OneHourEmoji, generateTimeOffsetAction(TimeSpan.FromHours(1))),
-                    (Strings.TwoHoursEmoji, generateTimeOffsetAction(TimeSpan.FromHours(2))),
-                    (Strings.TenOClockEmoji, generateTimeSetAction(DateTimeOffset.Parse("10:00 PM"))),
-                    (Strings.ElevenOClockEmoji, generateTimeSetAction(DateTimeOffset.Parse("11:00 PM"))),
-                    (Strings.TwelveOClockEmoji,  generateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1)))
-                },
+                actions: actionButtons,
                 onTimeout: () =>
                 {
                     EMessages.Remove(messageId);
@@ -181,14 +189,23 @@ namespace EBot.Helpers
             }
         }
 
-        public static async Task UpdateEStatus(ulong channelId, ulong userId, EState state, DateTimeOffset? timeAvailable = null)
+        public static async Task UpdateEStatus(ulong channelId, ulong userId, EState state)
+        {
+            await UpdateEStatus(channelId, userId, EStatus.FromState(state));
+        }
+
+        public static async Task UpdateEStatus(ulong channelId, ulong userId, EState state, DateTimeOffset timeAvailable)
+        {
+            await UpdateEStatus(channelId, userId, EStatus.FromState(state, timeAvailable));
+        }
+
+        public static async Task UpdateEStatus(ulong channelId, ulong userId, EStatus status)
         {
             EMessage emessage = EMessages.GetValueOrDefault(channelId);
             if (emessage == null) return;
 
-            await DiscordBot.MainInstance.Log(new LogMessage(LogSeverity.Info, "UpdateEStatus", $"{userId} updated estatus to {state} at time {timeAvailable}"));
+            await DiscordBot.MainInstance.Log(new LogMessage(LogSeverity.Info, "UpdateEStatus", $"{userId} updated estatus to {status.State} at time {status.TimeAvailable}"));
 
-            var status = EStatus.FromState(state, timeAvailable);
             emessage.Statuses[userId] = status;
             SaveEMessages();
 
@@ -315,67 +332,6 @@ namespace EBot.Helpers
                 b /= count;
                 return new Color((byte)Math.Sqrt(r), (byte)Math.Sqrt(g), (byte)Math.Sqrt(b));
             }
-        }
-    }
-
-    public class EWalker
-    {
-        public DateTime Read(ASTNode node)
-        {
-            switch (node.Symbol.ID)
-            {
-                case EParser.ID.VariableTime: return ReadTime(node);
-            }
-
-            return DateTime.MinValue;
-        }
-
-        public DateTime ReadTime(ASTNode node)
-        {
-            var children = node.Children;
-
-            var time = children.First();
-
-            TimeSpan ampm;
-            if (DateTime.Now.Hour < 12) ampm = new TimeSpan(0, 0, 0);
-            else ampm = new TimeSpan(12, 0, 0);
-
-            if (time.Symbol.ID == ELexer.ID.TerminalTexttime)
-            {
-                return DateTime.Today + ampm + TexttimeOffset(time.Value);
-            }
-            else
-            {
-                var minute = 0;
-
-                if (children.Count == 2) Int32.Parse(children.ElementAt(1).Value);
-
-                var hour = Int32.Parse(time.Value);
-
-                return DateTime.Today + ampm + new TimeSpan(hour, minute, 0);
-            }
-        }
-
-        public TimeSpan TexttimeOffset(string texttime)
-        {
-            return texttime switch
-            {
-                "one" => new TimeSpan(1, 0, 0),
-                "two" => new TimeSpan(2, 0, 0),
-                "three" => new TimeSpan(3, 0, 0),
-                "four" => new TimeSpan(4, 0, 0),
-                "five" => new TimeSpan(5, 0, 0),
-                "six" => new TimeSpan(6, 0, 0),
-                "seven" => new TimeSpan(7, 0, 0),
-                "eight" => new TimeSpan(8, 0, 0),
-                "nine" => new TimeSpan(9, 0, 0),
-                "ten" => new TimeSpan(10, 0, 0),
-                "eleven" => new TimeSpan(11, 0, 0),
-                "twelve" => new TimeSpan(12, 0, 0),
-                "noon" => new TimeSpan(12, 0, 0),
-                "midnight" => new TimeSpan(12, 0, 0),
-                _ => new TimeSpan(-1, 0, 0),
-            };
         }
     }
 }

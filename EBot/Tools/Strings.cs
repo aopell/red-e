@@ -13,6 +13,7 @@ namespace EBot.Tools
         public const string UnavailableEmoji = "<:unavailable:706702240467124345>";
         public const string SleepEmoji = "<:sleep:706705461486944348>";
 
+        public const string AgreeEmoji = "<:agree:707079412343898192>";
         public const string FiveMinutesEmoji = "<:fiveminutes:706000163738484756>";
         public const string FifteenMinutesEmoji = "<:fifteenminutes:706000163562323979>";
         public const string OneHourEmoji = "<:onehour:706000163688153088>";
