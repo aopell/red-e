@@ -14,6 +14,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using E;
+using EBot.Tools;
 
 namespace EBot.Helpers
 {
@@ -52,21 +53,20 @@ namespace EBot.Helpers
         {
             var context = new BotCommandContext(DiscordBot.MainInstance.Client, message, DiscordBot.MainInstance);
 
-            bool existing = EMessages.ContainsKey(context.Channel.Id);
+            bool existing = EMessages.GetValueOrDefault(context.Channel.Id) != null;
 
             var senderStatus = EMessageTimeHelper.Read(root);
 
             if (existing)
             {
-                var confirmMessage = await context.Channel.SendMessageAsync("There is already an active e message in this channel. Create another?");
-                ReactionMessageHelper.CreateConfirmReactionMessage(context, confirmMessage, 
-                                                                   (rm, sr) => Task.WhenAll(CreateEMessage(context, senderStatus), confirmMessage.DeleteAsync()), 
+                var confirmMessage = await context.Channel.SendMessageAsync("There is already an active e message in this channel. Replace it?");
+                ReactionMessageHelper.CreateConfirmReactionMessage(context, confirmMessage,
+                                                                   (rm, sr) => Task.WhenAll(CreateEMessage(context, senderStatus), confirmMessage.DeleteAsync()),
                                                                    (rm, sr) => confirmMessage.DeleteAsync());
+                return;
             }
-            else
-            {
-                await CreateEMessage(context, senderStatus);
-            }
+
+            await CreateEMessage(context, senderStatus);
         }
 
         public static async Task CreateEMessage(BotCommandContext context, EStatus senderStatus)
@@ -94,6 +94,25 @@ namespace EBot.Helpers
 
         private static void CreateEMessage(BotCommandContext context, EMessage emessage, RestUserMessage message, ulong messageId)
         {
+            var actionButtons = new List<(string, Func<ReactionMessage, SocketReaction, Task>)>
+            {
+                (Strings.AvailableEmoji, (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Available)),
+                (Strings.MaybeEmoji, (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Maybe)),
+                (Strings.UnavailableEmoji, (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Unavailable)),
+                (Strings.FiveMinutesEmoji, generateTimeOffsetAction(TimeSpan.FromMinutes(5))),
+                (Strings.FifteenMinutesEmoji, generateTimeOffsetAction(TimeSpan.FromMinutes(15))),
+                (Strings.OneHourEmoji, generateTimeOffsetAction(TimeSpan.FromHours(1))),
+                (Strings.TwoHoursEmoji, generateTimeOffsetAction(TimeSpan.FromHours(2))),
+                (Strings.TenOClockEmoji, generateTimeSetAction(DateTimeOffset.Parse("10:00 PM"))),
+                (Strings.ElevenOClockEmoji, generateTimeSetAction(DateTimeOffset.Parse("11:00 PM"))),
+                (Strings.TwelveOClockEmoji,  generateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1)))
+            };
+
+            if (emessage.ProposedTime is DateTimeOffset dto && dto > DateTimeOffset.Now)
+            {
+                actionButtons.Insert(1, (Strings.AgreeEmoji, generateTimeSetAction(dto)));
+            }
+
             emessage.MessageIds.Add(messageId);
             EMessages[emessage.Channel.Id] = emessage;
             SaveEMessages();
@@ -103,19 +122,7 @@ namespace EBot.Helpers
                 allowMultipleReactions: true,
                 anyoneCanInteract: true,
                 timeout: (int)TimeSpan.FromHours(12).TotalMilliseconds,
-                actions: new List<(string, Func<ReactionMessage, SocketReaction, Task>)>
-                {
-                    ("<:available:706270615312662568>", (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Available)),
-                    ("<:maybe:706702223446376517>", (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Maybe)),
-                    ("<:unavailable:706702240467124345>", (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Unavailable)),
-                    ("<:fiveminutes:706000163738484756>", generateTimeOffsetAction(TimeSpan.FromMinutes(5))),
-                    ("<:fifteenminutes:706000163562323979>", generateTimeOffsetAction(TimeSpan.FromMinutes(15))),
-                    ("<:onehour:706000163688153088>", generateTimeOffsetAction(TimeSpan.FromHours(1))),
-                    ("<:twohours:706000163596009514>", generateTimeOffsetAction(TimeSpan.FromHours(2))),
-                    ("<:tenoclock:706000163801399346>", generateTimeSetAction(DateTimeOffset.Parse("10:00 PM"))),
-                    ("<:elevenoclock:706000163142893639>", generateTimeSetAction(DateTimeOffset.Parse("11:00 PM"))),
-                    ("<:twelveoclock:706000163826565200>",  generateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1)))
-                },
+                actions: actionButtons,
                 onTimeout: () =>
                 {
                     EMessages.Remove(messageId);
@@ -141,6 +148,7 @@ namespace EBot.Helpers
         {
             foreach (var emessage in EMessages.Values.ToArray())
             {
+                if (emessage == null) continue;
                 var role = emessage.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
                 foreach (ulong userId in emessage.Statuses.Keys.ToArray())
                 {
@@ -150,7 +158,7 @@ namespace EBot.Helpers
                     if (status.State == EState.AvailableLater && status.TimeAvailable < DateTimeOffset.Now && !status.ShamedForLateness)
                     {
                         status.ShamedForLateness = true;
-                        string shameMessage = DiscordBot.MainInstance.Options.ShameMessages.OrderBy(x => Guid.NewGuid()).First();
+                        string shameMessage = DiscordBot.MainInstance.Options.ShameMessages.Random();
                         _ = emessage.Channel.SendMessageAsync(string.Format(shameMessage, $"<@{userId}>"));
                         _ = emessage.Guild.GetUser(userId).AddRoleAsync(role);
                     }
@@ -180,12 +188,12 @@ namespace EBot.Helpers
                 catch { }
             }
         }
-        
+
         public static async Task UpdateEStatus(ulong channelId, ulong userId, EState state)
         {
             await UpdateEStatus(channelId, userId, EStatus.FromState(state));
         }
-        
+
         public static async Task UpdateEStatus(ulong channelId, ulong userId, EState state, DateTimeOffset timeAvailable)
         {
             await UpdateEStatus(channelId, userId, EStatus.FromState(state, timeAvailable));
@@ -249,13 +257,13 @@ namespace EBot.Helpers
             {
                 return status.State switch
                 {
-                    EState.Unavailable => "<:unavailable:706702240467124345> Unavailable",
-                    EState.Maybe => "<:maybe:706702223446376517> Maybe Later",
+                    EState.Unavailable => $"{Strings.UnavailableEmoji} Unavailable",
+                    EState.Maybe => $"{Strings.MaybeEmoji} Maybe Later",
                     EState.AvailableLater => getAvailableLaterStatus(status.TimeAvailable),
-                    EState.Available => "<:available:706270615312662568> Available Now",
-                    EState.Ready => "<:ready:706270984973451295> Ready (In Voice)",
-                    EState.Done => $"<:sleep:706705461486944348> {(status.TimeUpdated.Hour >= 20 || status.TimeUpdated.Hour <= 5 ? "Sleeeep" : "eeeed")}",
-                    _ => "<:unknown:706271972983701524> Unknown",
+                    EState.Available => $"{Strings.AvailableEmoji} Available Now",
+                    EState.Ready => $"{Strings.ReadyEmoji} Ready (In Voice)",
+                    EState.Done => $"{Strings.SleepEmoji} {(status.TimeUpdated.Hour >= 20 || status.TimeUpdated.Hour <= 5 ? "Sleeeep" : "eeeed")}",
+                    _ => $"{Strings.UnknownEmoji} Unknown",
                 };
             }
 
@@ -268,7 +276,7 @@ namespace EBot.Helpers
                     span = span.Negate();
                 }
 
-                return $"{(late ? "⏰" : "⌛")} {(span.TotalHours >= 1 ? $"{(int)span.TotalHours} hour{(span.TotalHours >= 2 ? "s" : "")} " : "")}{span.Minutes} min{(span.Minutes != 1 ? "s" : "")}{(late ? " late" : "")}";
+                return $"{(late ? Strings.LateEmoji : Strings.WaitingEmoji)} {(span.TotalHours >= 1 ? $"{(int)span.TotalHours} hour{(span.TotalHours >= 2 ? "s" : "")} " : "")}{span.Minutes} min{(span.Minutes != 1 ? "s" : "")}{(late ? " late" : "")}";
             }
 
             Color getEmbedColor()

@@ -32,11 +32,15 @@ namespace EBot.Models
             GuildId = guildId;
             MessageIds = new List<ulong>();
             ProposedTime = senderStatus?.TimeAvailable;
-            Statuses = new Dictionary<ulong, EStatus> { { creatorId, senderStatus } };
+            Statuses = new Dictionary<ulong, EStatus>();
             CreatedTimestamp = DateTimeOffset.Now;
             foreach (ulong user in users)
             {
-                Statuses.Add(user, EStatus.FromState(EState.Unknown));
+                Statuses[user] = EStatus.FromState(EState.Unknown);
+            }
+            if (senderStatus != null)
+            {
+                Statuses[creatorId] = senderStatus;
             }
         }
 
@@ -74,11 +78,8 @@ namespace EBot.Models
             ShamedForLateness = shamedForLateness;
         }
 
-        public static EStatus FromState(EState state)
-        {
-            return FromState(state, DateTimeOffset.MaxValue);
-        }
-        
+        public static EStatus FromState(EState state) => FromState(state, DateTimeOffset.MaxValue);
+
         public static EStatus FromState(EState state, DateTimeOffset timeAvailable)
         {
             return new EStatus

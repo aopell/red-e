@@ -62,8 +62,8 @@ namespace EBot.Helpers
                 _ => EStatus.FromState(EState.Unknown)
             };
         }
-        
-        public  static EStatus ReadTime(ASTNode node)
+
+        public static EStatus ReadTime(ASTNode node)
         {
             ASTFamily children = node.Children;
 
@@ -75,7 +75,7 @@ namespace EBot.Helpers
             {
                 return EStatus.FromState(EState.AvailableLater, DateTime.Today + ampm + TexttimeOffset(time.Value));
             }
-            
+
             int minute = 0;
 
             if (children.Count == 2) minute = int.Parse(children.ElementAt(1).Value);
