@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace EBot.Helpers
+namespace EBot.Tools
 {
     public static class Extensions
     {

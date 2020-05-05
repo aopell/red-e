@@ -10,6 +10,7 @@ using Discord.WebSocket;
 using System.Threading.Tasks;
 using System.Runtime.Caching;
 using System.Linq;
+using EBot.Tools;
 
 namespace EBot.Helpers
 {
@@ -36,8 +37,8 @@ namespace EBot.Helpers
         {
             CreateReactionMessage(context, message, new List<(string, ReactionAction)>
             {
-                ("✅", onPositiveResponse),
-                ("❌",  onNegativeResponse)
+                (Strings.ReadyEmoji, onPositiveResponse),
+                (Strings.UnavailableEmoji,  onNegativeResponse)
             }, allowMultipleReactions, false, timeout, onTimeout);
         }
 
