@@ -48,65 +48,73 @@ namespace E
 			/// </summary>
 			public const int TerminalTonight = 0x0009;
 			/// <summary>
+			/// The unique identifier for terminal LATER
+			/// </summary>
+			public const int TerminalLater = 0x000A;
+			/// <summary>
 			/// The unique identifier for terminal MINS
 			/// </summary>
-			public const int TerminalMins = 0x000A;
+			public const int TerminalMins = 0x000B;
+			/// <summary>
+			/// The unique identifier for terminal ISH
+			/// </summary>
+			public const int TerminalIsh = 0x000C;
 			/// <summary>
 			/// The unique identifier for terminal INSOON
 			/// </summary>
-			public const int TerminalInsoon = 0x000B;
+			public const int TerminalInsoon = 0x000D;
 			/// <summary>
 			/// The unique identifier for terminal INSOONISH
 			/// </summary>
-			public const int TerminalInsoonish = 0x000C;
+			public const int TerminalInsoonish = 0x000E;
 			/// <summary>
 			/// The unique identifier for terminal SOON
 			/// </summary>
-			public const int TerminalSoon = 0x000D;
+			public const int TerminalSoon = 0x000F;
 			/// <summary>
 			/// The unique identifier for terminal SOONISH
 			/// </summary>
-			public const int TerminalSoonish = 0x000E;
+			public const int TerminalSoonish = 0x0010;
 			/// <summary>
 			/// The unique identifier for terminal AT_OR_BEFORE
 			/// </summary>
-			public const int TerminalAtOrBefore = 0x000F;
+			public const int TerminalAtOrBefore = 0x0011;
 			/// <summary>
 			/// The unique identifier for terminal AMINUTE
 			/// </summary>
-			public const int TerminalAminute = 0x0010;
+			public const int TerminalAminute = 0x0012;
 			/// <summary>
 			/// The unique identifier for terminal ANHOUR
 			/// </summary>
-			public const int TerminalAnhour = 0x0011;
+			public const int TerminalAnhour = 0x0013;
 			/// <summary>
 			/// The unique identifier for terminal RANGE
 			/// </summary>
-			public const int TerminalRange = 0x0012;
+			public const int TerminalRange = 0x0014;
 			/// <summary>
 			/// The unique identifier for terminal INTEGER
 			/// </summary>
-			public const int TerminalInteger = 0x0013;
+			public const int TerminalInteger = 0x0015;
 			/// <summary>
 			/// The unique identifier for terminal NUMBER
 			/// </summary>
-			public const int TerminalNumber = 0x0014;
+			public const int TerminalNumber = 0x0016;
 			/// <summary>
 			/// The unique identifier for terminal MINUTE
 			/// </summary>
-			public const int TerminalMinute = 0x0015;
+			public const int TerminalMinute = 0x0017;
 			/// <summary>
 			/// The unique identifier for terminal TEXTTIME
 			/// </summary>
-			public const int TerminalTexttime = 0x0016;
+			public const int TerminalTexttime = 0x0018;
 			/// <summary>
 			/// The unique identifier for terminal HOUR
 			/// </summary>
-			public const int TerminalHour = 0x0017;
+			public const int TerminalHour = 0x0019;
 			/// <summary>
 			/// The unique identifier for terminal E
 			/// </summary>
-			public const int TerminalE = 0x0018;
+			public const int TerminalE = 0x001A;
 		}
 		/// <summary>
 		/// Contains the constant IDs for the contexts for this lexer
@@ -130,29 +138,33 @@ namespace E
 			/// </summary>
 			public const int Min = 0x0003;
 			/// <summary>
+			/// The unique identifier for context ish
+			/// </summary>
+			public const int Ish = 0x0004;
+			/// <summary>
 			/// The unique identifier for context soon
 			/// </summary>
-			public const int Soon = 0x0004;
+			public const int Soon = 0x0005;
 			/// <summary>
 			/// The unique identifier for context at
 			/// </summary>
-			public const int At = 0x0005;
+			public const int At = 0x0006;
 			/// <summary>
 			/// The unique identifier for context one
 			/// </summary>
-			public const int One = 0x0006;
+			public const int One = 0x0007;
 			/// <summary>
 			/// The unique identifier for context range
 			/// </summary>
-			public const int Range = 0x0007;
+			public const int Range = 0x0008;
 			/// <summary>
 			/// The unique identifier for context time
 			/// </summary>
-			public const int Time = 0x0008;
+			public const int Time = 0x0009;
 			/// <summary>
 			/// The unique identifier for context start
 			/// </summary>
-			public const int Start = 0x0009;
+			public const int Start = 0x000A;
 		}
 		/// <summary>
 		/// The collection of terminals matched by this lexer
@@ -170,28 +182,30 @@ namespace E
 			new Symbol(0x0007, "WITHIN"),
 			new Symbol(0x0008, "LIKE"),
 			new Symbol(0x0009, "TONIGHT"),
-			new Symbol(0x000A, "MINS"),
-			new Symbol(0x000B, "INSOON"),
-			new Symbol(0x000C, "INSOONISH"),
-			new Symbol(0x000D, "SOON"),
-			new Symbol(0x000E, "SOONISH"),
-			new Symbol(0x000F, "AT_OR_BEFORE"),
-			new Symbol(0x0010, "AMINUTE"),
-			new Symbol(0x0011, "ANHOUR"),
-			new Symbol(0x0012, "RANGE"),
-			new Symbol(0x0013, "INTEGER"),
-			new Symbol(0x0014, "NUMBER"),
-			new Symbol(0x0015, "MINUTE"),
-			new Symbol(0x0016, "TEXTTIME"),
-			new Symbol(0x0017, "HOUR"),
-			new Symbol(0x0018, "E"),
-			new Symbol(0x0026, "now"),
-			new Symbol(0x0028, "hr"),
-			new Symbol(0x0029, " hour"),
-			new Symbol(0x002A, "s"),
-			new Symbol(0x0032, ":"),
-			new Symbol(0x0038, " "),
-			new Symbol(0x0039, "?") };
+			new Symbol(0x000A, "LATER"),
+			new Symbol(0x000B, "MINS"),
+			new Symbol(0x000C, "ISH"),
+			new Symbol(0x000D, "INSOON"),
+			new Symbol(0x000E, "INSOONISH"),
+			new Symbol(0x000F, "SOON"),
+			new Symbol(0x0010, "SOONISH"),
+			new Symbol(0x0011, "AT_OR_BEFORE"),
+			new Symbol(0x0012, "AMINUTE"),
+			new Symbol(0x0013, "ANHOUR"),
+			new Symbol(0x0014, "RANGE"),
+			new Symbol(0x0015, "INTEGER"),
+			new Symbol(0x0016, "NUMBER"),
+			new Symbol(0x0017, "MINUTE"),
+			new Symbol(0x0018, "TEXTTIME"),
+			new Symbol(0x0019, "HOUR"),
+			new Symbol(0x001A, "E"),
+			new Symbol(0x0028, "now"),
+			new Symbol(0x002A, "hr"),
+			new Symbol(0x002B, " hour"),
+			new Symbol(0x002C, "s"),
+			new Symbol(0x0036, ":"),
+			new Symbol(0x003C, " "),
+			new Symbol(0x003D, "?") };
 		/// <summary>
 		/// Initializes a new instance of the lexer
 		/// </summary>

@@ -31,7 +31,11 @@ namespace EBot.Helpers
 
             if (!parse.IsSuccess) return;
 
-            await HandleEMessagePrompt(message, parse.Root);
+            var root = parse.Root;
+
+            if (!char.IsWhiteSpace(root.Children[0].Value.TrimEnd('e', 'E')[^1])) return; // a disgusting way to avoid false positives
+
+            await HandleEMessagePrompt(message, root.Children[1]);
         }
 
         public static async Task UserVoiceStateUpdated(SocketUser user, SocketVoiceState prev, SocketVoiceState curr)
