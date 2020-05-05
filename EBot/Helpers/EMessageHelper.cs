@@ -33,7 +33,8 @@ namespace EBot.Helpers
 
             var root = parse.Root;
 
-            if (!char.IsWhiteSpace(root.Children[0].Value.TrimEnd('e', 'E')[^1])) return; // a disgusting way to avoid false positives
+            string stripped = root.Children[0].Value.TrimEnd('e', 'E');
+            if (!string.IsNullOrWhiteSpace(stripped) && !char.IsWhiteSpace(stripped[^1])) return; // a disgusting way to avoid false positives
 
             await HandleEMessagePrompt(message, root.Children[1]);
         }
