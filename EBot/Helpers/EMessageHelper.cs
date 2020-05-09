@@ -102,6 +102,7 @@ namespace EBot.Helpers
             var actionButtons = new List<(string, Func<ReactionMessage, SocketReaction, Task>)>
             {
                 (Strings.AvailableEmoji, (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Available)),
+                (Strings.AgreeEmoji, emessage.AgreeWithCreator),
                 (Strings.MaybeEmoji, (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Maybe)),
                 (Strings.UnavailableEmoji, (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Unavailable)),
                 (Strings.FiveMinutesEmoji, generateTimeOffsetAction(TimeSpan.FromMinutes(5))),
@@ -112,11 +113,6 @@ namespace EBot.Helpers
                 (Strings.ElevenOClockEmoji, generateTimeSetAction(DateTimeOffset.Parse("11:00 PM"))),
                 (Strings.TwelveOClockEmoji,  generateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1)))
             };
-
-            if (emessage.ProposedTime is DateTimeOffset dto && dto > DateTimeOffset.Now)
-            {
-                actionButtons.Insert(1, (Strings.AgreeEmoji, generateTimeSetAction(dto)));
-            }
 
             emessage.MessageIds.Add(messageId);
             EMessages[emessage.Channel.Id] = emessage;
@@ -174,6 +170,7 @@ namespace EBot.Helpers
                 if (DateTimeOffset.Now - emessage.CreatedTimestamp > TimeSpan.FromHours(12))
                 {
                     EMessages[emessage.ChannelId] = null;
+                    SaveEMessages();
                 }
             }
         }

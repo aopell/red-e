@@ -1,10 +1,12 @@
 using Discord;
 using Discord.WebSocket;
 using EBot.Commands;
+using EBot.Helpers;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace EBot.Models
 {
@@ -16,7 +18,7 @@ namespace EBot.Models
         public List<ulong> MessageIds { get; private set; }
         public Dictionary<ulong, EStatus> Statuses { get; private set; }
         public DateTimeOffset CreatedTimestamp { get; private set; }
-        public DateTimeOffset? ProposedTime { get; private set; }
+        public DateTimeOffset? ProposedTime => (Statuses.GetValueOrDefault(CreatorId)?.TimeAvailable ?? DateTimeOffset.MaxValue) == DateTimeOffset.MaxValue ? (DateTimeOffset?)null : Statuses.GetValueOrDefault(CreatorId).TimeAvailable;
 
         [JsonIgnore]
         public IUser Creator => DiscordBot.MainInstance.Client.GetUser(CreatorId);
@@ -31,7 +33,6 @@ namespace EBot.Models
             ChannelId = channelId;
             GuildId = guildId;
             MessageIds = new List<ulong>();
-            ProposedTime = senderStatus?.TimeAvailable;
             Statuses = new Dictionary<ulong, EStatus>();
             CreatedTimestamp = DateTimeOffset.Now;
             foreach (ulong user in users)
@@ -45,7 +46,7 @@ namespace EBot.Models
         }
 
         [JsonConstructor]
-        private EMessage(ulong creatorId, ulong channelId, ulong guildId, List<ulong> messageIds, Dictionary<ulong, EStatus> statuses, DateTimeOffset createdTimestamp, DateTimeOffset? proposedTime)
+        private EMessage(ulong creatorId, ulong channelId, ulong guildId, List<ulong> messageIds, Dictionary<ulong, EStatus> statuses, DateTimeOffset createdTimestamp)
         {
             CreatorId = creatorId;
             ChannelId = channelId;
@@ -53,7 +54,28 @@ namespace EBot.Models
             MessageIds = messageIds;
             Statuses = statuses;
             CreatedTimestamp = createdTimestamp;
-            ProposedTime = proposedTime;
+        }
+
+        public async Task AgreeWithCreator(ReactionMessage rm, SocketReaction sr)
+        {
+            var creatorStatus = Statuses.GetValueOrDefault(CreatorId);
+            EState targetState = creatorStatus?.State ?? EState.Unknown;
+            switch (targetState)
+            {
+                case EState.Maybe:
+                case EState.Unavailable:
+                case EState.AvailableLater:
+                case EState.Available:
+                    break;
+                case EState.Ready:
+                    targetState = EState.Available;
+                    break;
+                case EState.Unknown:
+                case EState.Done:
+                default:
+                    return;
+            }
+            await EMessageHelper.UpdateEStatus(rm.Context.Channel.Id, sr.UserId, targetState, creatorStatus?.TimeAvailable ?? DateTimeOffset.MaxValue);
         }
     }
 
@@ -85,7 +107,7 @@ namespace EBot.Models
             return new EStatus
             {
                 State = state,
-                TimeAvailable = state == EState.AvailableLater ? timeAvailable : DateTimeOffset.Now
+                TimeAvailable = state == EState.AvailableLater ? timeAvailable : DateTimeOffset.MaxValue
             };
         }
     }

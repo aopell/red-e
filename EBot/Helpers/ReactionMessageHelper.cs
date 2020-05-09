@@ -63,7 +63,7 @@ namespace EBot.Helpers
 
         public static async Task HandleReactionMessage(ISocketMessageChannel channel, SocketSelfUser botUser, SocketReaction reaction, IUserMessage message)
         {
-            if (message.Author.Id == botUser.Id && reaction.UserId != botUser.Id)
+            if (message != null && message.Author.Id == botUser.Id && reaction.UserId != botUser.Id)
             {
                 var reactionMessage = GetReactionMessageById(message.Id);
                 if (reactionMessage != null && (reactionMessage.AnyoneCanInteract || reaction.UserId == reactionMessage.Context.User.Id) && (reactionMessage.AcceptsAllReactions || reactionMessage.AcceptedReactions.Contains(reaction.Emote.ToString())))

@@ -8,26 +8,26 @@ namespace EBot.Helpers
 {
     public static class EMessageTimeHelper
     {
-        public static EStatus Soon => InMinutes(10);
-        
-        public static EStatus Soonish => InMinutes(30);
+        public static EStatus Soon => InMinutes(30);
+
+        public static EStatus Soonish => InMinutes(90);
 
         public static EStatus Unknown => EStatus.FromState(EState.Unknown);
-        
+
         public static EStatus AtTime(int hour, int minute = 0)
         {
             return AtTime(new TimeSpan(hour, minute, 0));
         }
-        
+
         public static EStatus AtTime(TimeSpan time)
         {
             TimeSpan ampm = DateTime.Now.Hour < 12 ? new TimeSpan(0, 0, 0) : new TimeSpan(12, 0, 0);
 
             return EStatus.FromState(EState.AvailableLater, DateTime.Today + ampm + time);
         }
-            
+
         public static EStatus InMinutes(int minutes) => EStatus.FromState(EState.AvailableLater, DateTimeOffset.Now + TimeSpan.FromMinutes(minutes));
-        
+
         public static EStatus InHours(int hours) => EStatus.FromState(EState.AvailableLater, DateTimeOffset.Now + TimeSpan.FromHours(hours));
 
         public static EStatus Read(ASTNode node)
@@ -75,7 +75,7 @@ namespace EBot.Helpers
                 ELexer.ID.TerminalNumber => Number(number.Value),
                 _ => -1
             };
-            
+
             return node.Children[1].Symbol.ID switch
             {
                 EParser.ID.VariableNhours => InHours(time),
@@ -93,7 +93,7 @@ namespace EBot.Helpers
             return textOrHour.Symbol.ID switch
             {
                 ELexer.ID.TerminalTexttime => AtTime(TexttimeOffset(textOrHour.Value)),
-                ELexer.ID.TerminalHour 
+                ELexer.ID.TerminalHour
                     when children.Count == 1 => AtTime(int.Parse(textOrHour.Value)),
                 ELexer.ID.TerminalHour
                     when children.Count == 2 => AtTime(int.Parse(textOrHour.Value), int.Parse(children[1].Value)),
@@ -122,7 +122,7 @@ namespace EBot.Helpers
                 _ => TimeSpan.FromHours(-1)
             };
         }
-        
+
         public static int Number(string number)
         {
             return number switch
