@@ -205,6 +205,7 @@ namespace EBot.Helpers
         {
             EMessage emessage = EMessages.GetValueOrDefault(channelId);
             if (emessage == null) return;
+            if ((emessage.Statuses.GetValueOrDefault(userId)?.State ?? EState.Unknown) == EState.Ready && status.State != EState.Done) return;
 
             await DiscordBot.MainInstance.Log(new LogMessage(LogSeverity.Info, "UpdateEStatus", $"{userId} updated estatus to {status.State} at time {status.TimeAvailable}"));
 
