@@ -12,5 +12,6 @@ namespace EBot.Config
         public ulong VoiceTargetRoomId { get; set; }
         public string[] ShameMessages { get; set; }
         public string AvailableRoleName { get; set; }
+        public string[] SuperShameMessages { get; set; }
     }
 }

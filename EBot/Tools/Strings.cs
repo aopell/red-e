@@ -25,5 +25,23 @@ namespace EBot.Tools
 
         public const string WaitingEmoji = "⌛";
         public const string LateEmoji = "⏰";
+
+        public static readonly Dictionary<string, string> EmojiStatusMessages = new Dictionary<string, string>
+        {
+            [UnknownEmoji] = "{0}'s status is unknown",
+            [ReadyEmoji] = "{0} is ready",
+            [AvailableEmoji] = "{0} is available now",
+            [MaybeEmoji] = "{0} is not sure yet",
+            [UnavailableEmoji] = "{0} is not available",
+            [SleepEmoji] = "{0} is done for now",
+            [AgreeEmoji] = "{0} has agreed with the original proposition",
+            [FiveMinutesEmoji] = "{0} needs five more minutes",
+            [FifteenMinutesEmoji] = "{0} needs fifteen more minutes",
+            [OneHourEmoji] = "{0} needs an hour",
+            [TwoHoursEmoji] = "{0} needs two hours",
+            [TenOClockEmoji] = "{0} will be available at 10 PM",
+            [ElevenOClockEmoji] = "{0} will be available at 11 PM",
+            [TwelveOClockEmoji] = "{0} will be available at 12 AM"
+        };
     }
 }

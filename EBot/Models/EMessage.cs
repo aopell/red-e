@@ -18,6 +18,7 @@ namespace EBot.Models
         public List<ulong> MessageIds { get; private set; }
         public Dictionary<ulong, EStatus> Statuses { get; private set; }
         public DateTimeOffset CreatedTimestamp { get; private set; }
+        public bool AvailablePeopleMentioned { get; set; }
         public DateTimeOffset? ProposedTime => (Statuses.GetValueOrDefault(CreatorId)?.TimeAvailable ?? DateTimeOffset.MaxValue) == DateTimeOffset.MaxValue ? (DateTimeOffset?)null : Statuses.GetValueOrDefault(CreatorId).TimeAvailable;
 
         [JsonIgnore]
@@ -35,6 +36,7 @@ namespace EBot.Models
             MessageIds = new List<ulong>();
             Statuses = new Dictionary<ulong, EStatus>();
             CreatedTimestamp = DateTimeOffset.Now;
+            AvailablePeopleMentioned = false;
             foreach (ulong user in users)
             {
                 Statuses[user] = EStatus.FromState(EState.Unknown);
@@ -46,7 +48,7 @@ namespace EBot.Models
         }
 
         [JsonConstructor]
-        private EMessage(ulong creatorId, ulong channelId, ulong guildId, List<ulong> messageIds, Dictionary<ulong, EStatus> statuses, DateTimeOffset createdTimestamp)
+        private EMessage(ulong creatorId, ulong channelId, ulong guildId, List<ulong> messageIds, Dictionary<ulong, EStatus> statuses, DateTimeOffset createdTimestamp, bool availablePeopleMentioned)
         {
             CreatorId = creatorId;
             ChannelId = channelId;
@@ -54,6 +56,7 @@ namespace EBot.Models
             MessageIds = messageIds;
             Statuses = statuses;
             CreatedTimestamp = createdTimestamp;
+            AvailablePeopleMentioned = availablePeopleMentioned;
         }
 
         public async Task AgreeWithCreator(ReactionMessage rm, SocketReaction sr)
@@ -75,7 +78,7 @@ namespace EBot.Models
                 default:
                     return;
             }
-            await EMessageHelper.UpdateEStatus(rm.Context.Channel.Id, sr.UserId, targetState, creatorStatus?.TimeAvailable ?? DateTimeOffset.MaxValue);
+            await EMessageHelper.UpdateEStatus(rm.Channel.Id, sr.UserId, targetState, creatorStatus?.TimeAvailable ?? DateTimeOffset.MaxValue);
         }
     }
 
@@ -84,7 +87,7 @@ namespace EBot.Models
         public EState State { get; private set; }
         public DateTimeOffset TimeAvailable { get; private set; }
         public DateTimeOffset TimeUpdated { get; private set; }
-        public bool ShamedForLateness { get; set; } = false;
+        public LateState Lateness { get; set; }
 
         private EStatus()
         {
@@ -92,12 +95,12 @@ namespace EBot.Models
         }
 
         [JsonConstructor]
-        private EStatus(EState state, DateTimeOffset timeAvailable, DateTimeOffset timeUpdated, bool shamedForLateness)
+        private EStatus(EState state, DateTimeOffset timeAvailable, DateTimeOffset timeUpdated, LateState lateness)
         {
             State = state;
             TimeAvailable = timeAvailable;
             TimeUpdated = timeUpdated;
-            ShamedForLateness = shamedForLateness;
+            Lateness = lateness;
         }
 
         public static EStatus FromState(EState state) => FromState(state, DateTimeOffset.MaxValue);
@@ -121,5 +124,13 @@ namespace EBot.Models
         Available,
         Ready,
         Done
+    }
+
+    public enum LateState
+    {
+        NotLate,
+        SlightlyLate,
+        Late,
+        VeryLate
     }
 }

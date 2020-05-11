@@ -54,71 +54,69 @@ namespace EBot.Helpers
             }
         }
 
-        private static async Task HandleEMessagePrompt(SocketUserMessage message, ASTNode root)
+        private static async Task HandleEMessagePrompt(SocketMessage message, ASTNode root)
         {
-            var context = new BotCommandContext(DiscordBot.MainInstance.Client, message, DiscordBot.MainInstance);
-
-            bool existing = EMessages.GetValueOrDefault(context.Channel.Id) != null;
+            bool existing = EMessages.GetValueOrDefault(message.Channel.Id) != null;
 
             var senderStatus = EMessageTimeHelper.Read(root);
 
             if (existing)
             {
-                var confirmMessage = await context.Channel.SendMessageAsync("There is already an active e message in this channel. Replace it?");
-                ReactionMessageHelper.CreateConfirmReactionMessage(context, confirmMessage,
-                                                                   (rm, sr) => Task.WhenAll(CreateEMessage(context, senderStatus), confirmMessage.DeleteAsync()),
-                                                                   (rm, sr) => confirmMessage.DeleteAsync());
+                var confirmMessage = await message.Channel.SendMessageAsync("There is already an active e message in this channel. Replace it?");
+                ReactionMessageHelper.CreateConfirmReactionMessage(message.Author.Id, confirmMessage,
+                    onPositiveResponse: ReactionMessageHelper.DeleteMessageAndCall((rm, sr) => CreateEMessage(message.Author.Id, message.Channel.Id, ((IGuildChannel)message.Channel).Guild.Id, senderStatus)),
+                    onNegativeResponse: (rm, sr) => confirmMessage.DeleteAsync());
                 return;
             }
 
-            await CreateEMessage(context, senderStatus);
+            await CreateEMessage(message.Author.Id, message.Channel.Id, ((IGuildChannel)message.Channel).Guild.Id, senderStatus);
         }
 
-        public static async Task CreateEMessage(BotCommandContext context, EStatus senderStatus)
+        public static async Task CreateEMessage(ulong userId, ulong channelId, ulong guildId, EStatus senderStatus)
         {
-            EMessage emessage = new EMessage(context.User.Id, context.Channel.Id, context.Guild.Id, senderStatus, context.Bot.Options.DefaultUsers);
+            EMessage emessage = new EMessage(userId, channelId, guildId, senderStatus, DiscordBot.MainInstance.Options.DefaultUsers);
 
             var role = emessage.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
             if (role != null)
             {
-                foreach (ulong userId in emessage.Statuses.Keys)
+                foreach (ulong uid in emessage.Statuses.Keys)
                 {
-                    _ = emessage.Guild.GetUser(userId).RemoveRoleAsync(role);
+                    _ = emessage.Guild.GetUser(uid).RemoveRoleAsync(role);
                 }
             }
 
-            await CreateEMessage(context, emessage);
+            await CreateEMessage(emessage);
         }
 
-        public static async Task CreateEMessage(BotCommandContext context, EMessage emessage)
+        public static async Task CreateEMessage(EMessage emessage)
         {
             var message = await emessage.Channel.SendMessageAsync(embed: GenerateEmbed(emessage).Build());
             ulong messageId = message.Id;
-            CreateEMessage(context, emessage, message, messageId);
+            CreateEMessage(emessage, message, messageId);
         }
 
-        private static void CreateEMessage(BotCommandContext context, EMessage emessage, RestUserMessage message, ulong messageId)
+        private static void CreateEMessage(EMessage emessage, RestUserMessage message, ulong messageId)
         {
             var actionButtons = new List<(string, Func<ReactionMessage, SocketReaction, Task>)>
             {
-                (Strings.AvailableEmoji, (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Available)),
+                (Strings.AvailableEmoji, (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Available)),
                 (Strings.AgreeEmoji, emessage.AgreeWithCreator),
-                (Strings.MaybeEmoji, (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Maybe)),
-                (Strings.UnavailableEmoji, (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.Unavailable)),
-                (Strings.FiveMinutesEmoji, generateTimeOffsetAction(TimeSpan.FromMinutes(5))),
-                (Strings.FifteenMinutesEmoji, generateTimeOffsetAction(TimeSpan.FromMinutes(15))),
-                (Strings.OneHourEmoji, generateTimeOffsetAction(TimeSpan.FromHours(1))),
-                (Strings.TwoHoursEmoji, generateTimeOffsetAction(TimeSpan.FromHours(2))),
-                (Strings.TenOClockEmoji, generateTimeSetAction(DateTimeOffset.Parse("10:00 PM"))),
-                (Strings.ElevenOClockEmoji, generateTimeSetAction(DateTimeOffset.Parse("11:00 PM"))),
-                (Strings.TwelveOClockEmoji,  generateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1)))
+                (Strings.MaybeEmoji, (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Maybe)),
+                (Strings.UnavailableEmoji, (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Unavailable)),
+                (Strings.FiveMinutesEmoji, GenerateTimeOffsetAction(TimeSpan.FromMinutes(5))),
+                (Strings.FifteenMinutesEmoji, GenerateTimeOffsetAction(TimeSpan.FromMinutes(15))),
+                (Strings.OneHourEmoji, GenerateTimeOffsetAction(TimeSpan.FromHours(1))),
+                (Strings.TwoHoursEmoji, GenerateTimeOffsetAction(TimeSpan.FromHours(2))),
+                (Strings.TenOClockEmoji, GenerateTimeSetAction(DateTimeOffset.Parse("10:00 PM"))),
+                (Strings.ElevenOClockEmoji, GenerateTimeSetAction(DateTimeOffset.Parse("11:00 PM"))),
+                (Strings.TwelveOClockEmoji,  GenerateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1)))
             };
 
             emessage.MessageIds.Add(messageId);
             EMessages[emessage.Channel.Id] = emessage;
             SaveEMessages();
             ReactionMessageHelper.CreateReactionMessage(
-                context,
+                emessage.CreatorId,
                 message,
                 allowMultipleReactions: true,
                 anyoneCanInteract: true,
@@ -129,20 +127,20 @@ namespace EBot.Helpers
                     EMessages.Remove(messageId);
                 }
             );
+        }
 
-            Func<ReactionMessage, SocketReaction, Task> generateTimeOffsetAction(TimeSpan offset)
-            {
-                return (rm, sr) =>
-                {
-                    EStatus s = EMessages.GetValueOrDefault(rm.Context.Channel.Id)?.Statuses.GetValueOrDefault(sr.UserId, EStatus.FromState(EState.Unknown));
-                    return UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.AvailableLater, (s != null && s.State == EState.AvailableLater ? s.TimeAvailable : DateTimeOffset.Now) + offset);
-                };
-            }
+        private static Func<ReactionMessage, SocketReaction, Task> GenerateTimeSetAction(DateTimeOffset time)
+        {
+            return (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.AvailableLater, time);
+        }
 
-            Func<ReactionMessage, SocketReaction, Task> generateTimeSetAction(DateTimeOffset time)
+        private static Func<ReactionMessage, SocketReaction, Task> GenerateTimeOffsetAction(TimeSpan offset)
+        {
+            return (rm, sr) =>
             {
-                return (rm, sr) => UpdateEStatus(rm.Context.Channel.Id, sr.UserId, EState.AvailableLater, time);
-            }
+                EStatus s = EMessages.GetValueOrDefault(rm.Channel.Id)?.Statuses.GetValueOrDefault(sr.UserId, EStatus.FromState(EState.Unknown));
+                return UpdateEStatus(rm.Channel.Id, sr.UserId, EState.AvailableLater, (s != null && s.State == EState.AvailableLater ? s.TimeAvailable : DateTimeOffset.Now) + offset);
+            };
         }
 
         public static void UpdateEMessages()
@@ -151,17 +149,37 @@ namespace EBot.Helpers
             {
                 if (emessage == null) continue;
                 var role = emessage.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
+
                 foreach (ulong userId in emessage.Statuses.Keys.ToArray())
                 {
                     var status = emessage.Statuses.GetValueOrDefault(userId);
                     if (status == null) continue;
 
-                    if (status.State == EState.AvailableLater && status.TimeAvailable < DateTimeOffset.Now && !status.ShamedForLateness)
+                    if (status.State == EState.AvailableLater && status.TimeAvailable < DateTimeOffset.Now)
                     {
-                        status.ShamedForLateness = true;
-                        string shameMessage = DiscordBot.MainInstance.Options.ShameMessages.Random();
-                        _ = emessage.Channel.SendMessageAsync(string.Format(shameMessage, $"<@{userId}>"));
-                        _ = emessage.Guild.GetUser(userId).AddRoleAsync(role);
+                        TimeSpan offset = DateTimeOffset.Now - status.TimeAvailable;
+
+                        switch (status.Lateness)
+                        {
+                            case LateState.NotLate:
+                                _ = createConfirmAvailabilityReactionMessage(emessage, userId);
+                                _ = emessage.Guild.GetUser(userId).AddRoleAsync(role);
+                                status.Lateness = LateState.SlightlyLate;
+                                break;
+                            case LateState.SlightlyLate when offset >= TimeSpan.FromMinutes(5):
+                                string shameMessage = DiscordBot.MainInstance.Options.ShameMessages.Random();
+                                _ = emessage.Channel.SendMessageAsync(string.Format(shameMessage, $"<@{userId}>"));
+                                status.Lateness = LateState.Late;
+                                break;
+                            case LateState.Late when offset >= TimeSpan.FromMinutes(15):
+                                shameMessage = DiscordBot.MainInstance.Options.SuperShameMessages.Random();
+                                _ = emessage.Channel.SendMessageAsync(string.Format(shameMessage, $"<@{userId}>"));
+                                status.Lateness = LateState.VeryLate;
+                                break;
+                            case LateState.VeryLate:
+                            default:
+                                break;
+                        }
                     }
                 }
 
@@ -172,6 +190,33 @@ namespace EBot.Helpers
                     EMessages[emessage.ChannelId] = null;
                     SaveEMessages();
                 }
+            }
+
+            static async Task createConfirmAvailabilityReactionMessage(EMessage emessage, ulong userId)
+            {
+                var message = await emessage.Channel.SendMessageAsync($"<@{userId}>, are you ready?");
+                ReactionMessageHelper.CreateReactionMessage(
+                    userId,
+                    message,
+                    new List<(string e, Func<ReactionMessage, SocketReaction, Task> a)>
+                    {
+                        (Strings.AvailableEmoji, ReactionMessageHelper.EditMessageAndCall(getStatus(), (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Available))),
+                        (Strings.MaybeEmoji, ReactionMessageHelper.EditMessageAndCall(getStatus(), (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Maybe))),
+                        (Strings.UnavailableEmoji, ReactionMessageHelper.EditMessageAndCall(getStatus(), (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Unavailable))),
+                        (Strings.FiveMinutesEmoji, ReactionMessageHelper.EditMessageAndCall(getStatus(), GenerateTimeOffsetAction(TimeSpan.FromMinutes(5)))),
+                        (Strings.FifteenMinutesEmoji, ReactionMessageHelper.EditMessageAndCall(getStatus(), GenerateTimeOffsetAction(TimeSpan.FromMinutes(15)))),
+                    },
+                    timeout: (int)TimeSpan.FromMinutes(10).TotalMilliseconds,
+                    onTimeout: () =>
+                    {
+                        message.RemoveAllReactionsAsync();
+                    }
+                );
+            }
+
+            static Func<ReactionMessage, SocketReaction, Action<MessageProperties>> getStatus()
+            {
+                return (rm, sr) => mp => mp.Content = $"{sr.Emote} {string.Format(Strings.EmojiStatusMessages.GetValueOrDefault(sr.Emote.ToString()) ?? string.Empty, sr.User.Value?.NicknameOrUsername() ?? "<unknown user>")}";
             }
         }
 

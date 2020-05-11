@@ -18,7 +18,7 @@ namespace EBot.Commands.Modules
             var emessage = EMessageHelper.EMessages.GetValueOrDefault(Context.Channel.Id);
             if (emessage == null) throw new CommandExecutionException("There is no e message currently in this channel");
 
-            await EMessageHelper.CreateEMessage(Context, emessage);
+            await EMessageHelper.CreateEMessage(emessage);
         }
 
         [Command("delete"), Summary("Deletes the e message from this channel")]
@@ -28,7 +28,7 @@ namespace EBot.Commands.Modules
 
             var message = await Context.Channel.SendMessageAsync("Are you sure you want to delete the current e message?");
             ReactionMessageHelper.CreateConfirmReactionMessage(
-                Context,
+                Context.User.Id,
                 message,
                 (rm, sr) =>
                 {

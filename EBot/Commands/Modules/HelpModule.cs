@@ -20,7 +20,7 @@ namespace EBot.Commands.Modules
             int totalPages = (int)Math.Ceiling(HelpHelper.AllCommands.Count / (double)NUM_PER_PAGE);
             if (page > totalPages) throw new CommandExecutionException("Number too high", $"{Context.User.Mention}, you can't go to page {page}, there are only {totalPages}");
 
-            ReactionMessageHelper.CreatePaginatedMessage(Context, await ReplyAsync(embed: buildPage(page)), totalPages, page, m =>
+            ReactionMessageHelper.CreatePaginatedMessage(Context.User.Id, await ReplyAsync(embed: buildPage(page)), totalPages, page, m =>
             {
                 return Task.FromResult(((string)null, buildPage(m.CurrentPage)));
             });

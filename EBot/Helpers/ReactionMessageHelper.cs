@@ -18,34 +18,34 @@ namespace EBot.Helpers
     {
         private static ObjectCache ReactionMessageCache = new MemoryCache("reactionMessages");
 
-        public static void CreatePaginatedMessage(BotCommandContext context, IUserMessage message, int pageCount, int initialPage, PageAction action, int timeout = 300000, Action onTimeout = null)
+        public static void CreatePaginatedMessage(ulong userId, IUserMessage message, int pageCount, int initialPage, PageAction action, int timeout = 300000, Action onTimeout = null)
         {
             if (pageCount == 1) return;
             message.AddReactionsAsync(new[] { new Emoji(PaginatedMessage.FirstPage), new Emoji(PaginatedMessage.PreviousPage), new Emoji(PaginatedMessage.NextPage), new Emoji(PaginatedMessage.LastPage) });
 
-            var paginatedMessage = new PaginatedMessage(context, message, pageCount, initialPage, action);
+            var paginatedMessage = new PaginatedMessage(userId, message, pageCount, initialPage, action);
             ReactionMessageCache.Add(message.Id.ToString(), paginatedMessage, new CacheItemPolicy { SlidingExpiration = TimeSpan.FromMilliseconds(timeout), RemovedCallback = onTimeout == null ? null : (CacheEntryRemovedCallback)(_ => onTimeout()) });
         }
 
-        public static void CreateCustomReactionMessage(BotCommandContext context, IUserMessage message, CustomReactionAction defaultAction, bool allowMultipleReactions = false, bool anyoneCanInteract = false, int timeout = 300000, Action onTimeout = null)
+        public static void CreateCustomReactionMessage(ulong userId, IUserMessage message, CustomReactionAction defaultAction, bool allowMultipleReactions = false, bool anyoneCanInteract = false, int timeout = 300000, Action onTimeout = null)
         {
-            var reactionMessage = new ReactionMessage(context, message, defaultAction, allowMultipleReactions, anyoneCanInteract);
+            var reactionMessage = new ReactionMessage(userId, message, defaultAction, allowMultipleReactions, anyoneCanInteract);
             ReactionMessageCache.Add(message.Id.ToString(), reactionMessage, new CacheItemPolicy { SlidingExpiration = TimeSpan.FromMilliseconds(timeout), RemovedCallback = onTimeout == null ? null : (CacheEntryRemovedCallback)(_ => onTimeout()) });
         }
 
-        public static void CreateConfirmReactionMessage(BotCommandContext context, IUserMessage message, ReactionAction onPositiveResponse, ReactionAction onNegativeResponse, bool allowMultipleReactions = false, int timeout = 300000, Action onTimeout = null)
+        public static void CreateConfirmReactionMessage(ulong userId, IUserMessage message, ReactionAction onPositiveResponse, ReactionAction onNegativeResponse, bool allowMultipleReactions = false, int timeout = 300000, Action onTimeout = null)
         {
-            CreateReactionMessage(context, message, new List<(string, ReactionAction)>
+            CreateReactionMessage(userId, message, new List<(string, ReactionAction)>
             {
                 (Strings.ReadyEmoji, onPositiveResponse),
                 (Strings.UnavailableEmoji,  onNegativeResponse)
             }, allowMultipleReactions, false, timeout, onTimeout);
         }
 
-        public static void CreateReactionMessage(BotCommandContext context, IUserMessage message, List<(string e, ReactionAction a)> actions, bool allowMultipleReactions = false, bool anyoneCanInteract = false, int timeout = 300000, Action onTimeout = null)
+        public static void CreateReactionMessage(ulong userId, IUserMessage message, List<(string e, ReactionAction a)> actions, bool allowMultipleReactions = false, bool anyoneCanInteract = false, int timeout = 300000, Action onTimeout = null)
         {
             message.AddReactionsAsync(actions.Select(x => Emote.TryParse(x.e, out Emote emote) ? emote : (IEmote)new Emoji(x.e)).ToArray());
-            var reactionMessage = new ReactionMessage(context, message, actions, allowMultipleReactions, anyoneCanInteract);
+            var reactionMessage = new ReactionMessage(userId, message, actions, allowMultipleReactions, anyoneCanInteract);
             ReactionMessageCache.Add(message.Id.ToString(), reactionMessage, new CacheItemPolicy { SlidingExpiration = TimeSpan.FromMilliseconds(timeout), RemovedCallback = onTimeout == null ? null : (CacheEntryRemovedCallback)(_ => onTimeout()) });
         }
 
@@ -58,7 +58,7 @@ namespace EBot.Helpers
 
         private static void DeleteReactionMessage(ReactionMessage reactionMessage)
         {
-            ReactionMessageCache.Remove(reactionMessage.Message.ToString());
+            ReactionMessageCache.Remove(reactionMessage.Message.Id.ToString());
         }
 
         public static async Task HandleReactionMessage(ISocketMessageChannel channel, SocketSelfUser botUser, SocketReaction reaction, IUserMessage message)
@@ -66,7 +66,7 @@ namespace EBot.Helpers
             if (message != null && message.Author.Id == botUser.Id && reaction.UserId != botUser.Id)
             {
                 var reactionMessage = GetReactionMessageById(message.Id);
-                if (reactionMessage != null && (reactionMessage.AnyoneCanInteract || reaction.UserId == reactionMessage.Context.User.Id) && (reactionMessage.AcceptsAllReactions || reactionMessage.AcceptedReactions.Contains(reaction.Emote.ToString())))
+                if (reactionMessage != null && (reactionMessage.AnyoneCanInteract || reaction.UserId == reactionMessage.UserId) && (reactionMessage.AcceptsAllReactions || reactionMessage.AcceptedReactions.Contains(reaction.Emote.ToString())))
                 {
                     try
                     {
@@ -97,11 +97,24 @@ namespace EBot.Helpers
                 }
             }
         }
+        public static ReactionAction DeleteMessageAndCall(ReactionAction func)
+        {
+            return (rm, sr) => Task.WhenAll(rm.Message.DeleteAsync(), func(rm, sr));
+        }
+
+        public static ReactionAction EditMessageAndCall(
+            Func<ReactionMessage, SocketReaction, Action<MessageProperties>> action,
+            ReactionAction func)
+        {
+            return (rm, sr) => Task.WhenAll(rm.Message.ModifyAsync(action(rm, sr)), func(rm, sr));
+        }
     }
 
     public class ReactionMessage
     {
-        public BotCommandContext Context { get; }
+        public IMessageChannel Channel => Message.Channel;
+        public IGuild Guild => (Message.Channel as IGuildChannel)?.Guild;
+        public ulong UserId { get; }
         public IUserMessage Message { get; }
         public bool AllowMultipleReactions { get; }
         public bool AcceptsAllReactions { get; }
@@ -110,9 +123,9 @@ namespace EBot.Helpers
         protected CustomReactionAction DefaultAction { get; }
         protected List<(string emoji, ReactionAction action)> Actions { get; }
 
-        public ReactionMessage(BotCommandContext context, IUserMessage message, CustomReactionAction defaultAction, bool allowMultipleReactions = false, bool anyoneCanInteract = false)
+        public ReactionMessage(ulong userId, IUserMessage message, CustomReactionAction defaultAction, bool allowMultipleReactions = false, bool anyoneCanInteract = false)
         {
-            Context = context;
+            UserId = userId;
             Message = message;
             DefaultAction = defaultAction;
             AllowMultipleReactions = allowMultipleReactions;
@@ -120,9 +133,9 @@ namespace EBot.Helpers
             AnyoneCanInteract = anyoneCanInteract;
         }
 
-        public ReactionMessage(BotCommandContext context, IUserMessage message, List<(string, ReactionAction)> actions, bool allowMultipleReactions = false, bool anyoneCanInteract = false)
+        public ReactionMessage(ulong userId, IUserMessage message, List<(string, ReactionAction)> actions, bool allowMultipleReactions = false, bool anyoneCanInteract = false)
         {
-            Context = context;
+            UserId = userId;
             Message = message;
             Actions = actions;
             AllowMultipleReactions = allowMultipleReactions;
@@ -160,7 +173,7 @@ namespace EBot.Helpers
         public PageAction OnChage { get; }
         public override IEnumerable<string> AcceptedReactions => new[] { FirstPage, LastPage, PreviousPage, NextPage };
 
-        public PaginatedMessage(BotCommandContext context, IUserMessage message, int count, int initial, PageAction action) : base(context, message, new List<(string, ReactionAction)>(), true)
+        public PaginatedMessage(ulong userId, IUserMessage message, int count, int initial, PageAction action) : base(userId, message, new List<(string, ReactionAction)>(), true)
         {
             if (count < 1) throw new ArgumentOutOfRangeException(nameof(count));
             if (initial < 1 || initial > count) throw new ArgumentOutOfRangeException(nameof(initial));
