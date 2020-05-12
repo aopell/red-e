@@ -61,6 +61,11 @@ namespace EBot.Helpers
             ReactionMessageCache.Remove(reactionMessage.Message.Id.ToString());
         }
 
+        public static bool IsReactionMessage(ulong messageId)
+        {
+            return ReactionMessageCache.Contains(messageId.ToString());
+        }
+
         public static async Task HandleReactionMessage(ISocketMessageChannel channel, SocketSelfUser botUser, SocketReaction reaction, IUserMessage message)
         {
             if (message != null && message.Author.Id == botUser.Id && reaction.UserId != botUser.Id)

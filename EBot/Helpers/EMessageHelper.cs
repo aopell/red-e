@@ -91,11 +91,18 @@ namespace EBot.Helpers
         public static async Task CreateEMessage(EMessage emessage)
         {
             var message = await emessage.Channel.SendMessageAsync(embed: GenerateEmbed(emessage).Build());
-            ulong messageId = message.Id;
-            CreateEMessage(emessage, message, messageId);
+            CreateEMessage(emessage, message);
         }
 
-        private static void CreateEMessage(EMessage emessage, RestUserMessage message, ulong messageId)
+        private static void CreateEMessage(EMessage emessage, IUserMessage message)
+        {
+            emessage.MessageIds.Add(message.Id);
+            EMessages[emessage.Channel.Id] = emessage;
+            SaveEMessages();
+            CreateReactionMessage(emessage, message);
+        }
+
+        public static void CreateReactionMessage(EMessage emessage, IUserMessage message)
         {
             var actionButtons = new List<(string, Func<ReactionMessage, SocketReaction, Task>)>
             {
@@ -112,19 +119,17 @@ namespace EBot.Helpers
                 (Strings.TwelveOClockEmoji,  GenerateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1)))
             };
 
-            emessage.MessageIds.Add(messageId);
-            EMessages[emessage.Channel.Id] = emessage;
-            SaveEMessages();
             ReactionMessageHelper.CreateReactionMessage(
                 emessage.CreatorId,
                 message,
                 allowMultipleReactions: true,
                 anyoneCanInteract: true,
-                timeout: (int)TimeSpan.FromHours(12).TotalMilliseconds,
+                timeout: (int)TimeSpan.FromHours(4).TotalMilliseconds,
                 actions: actionButtons,
                 onTimeout: () =>
                 {
-                    EMessages.Remove(messageId);
+                    EMessages.Remove(message.Id);
+                    message.RemoveAllReactionsAsync();
                 }
             );
         }
@@ -379,6 +384,24 @@ namespace EBot.Helpers
                 g /= count;
                 b /= count;
                 return new Color((byte)Math.Sqrt(r), (byte)Math.Sqrt(g), (byte)Math.Sqrt(b));
+            }
+        }
+
+        public static async Task InitializeEMessages()
+        {
+            foreach (var emessage in EMessages.Values)
+            {
+                if (emessage is null) continue;
+
+                foreach (ulong id in emessage.MessageIds)
+                {
+                    if (ReactionMessageHelper.IsReactionMessage(id)) continue;
+                    var message = await emessage.Channel.GetMessageAsync(id);
+                    if (message is IUserMessage ium && DateTimeOffset.Now - message.CreatedAt < TimeSpan.FromHours(4))
+                    {
+                        CreateReactionMessage(emessage, ium);
+                    }
+                }
             }
         }
     }

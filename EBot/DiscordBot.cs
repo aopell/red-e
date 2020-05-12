@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using Ebot.Commands;
 using EBot.Config;
 using EBot.Helpers;
+using EBot.Models;
 using Hime.Redist;
 using System;
 using System.Collections.Generic;
@@ -163,6 +164,7 @@ namespace EBot
         private Task Client_Ready()
         {
             _ = MinuteTimer();
+            _ = EMessageHelper.InitializeEMessages();
             return Task.CompletedTask;
         }
 
