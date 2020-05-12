@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using EBot.Models;
 
 namespace EBot.Tools
 {
@@ -43,5 +44,31 @@ namespace EBot.Tools
             [ElevenOClockEmoji] = "{0} will be available at 11 PM",
             [TwelveOClockEmoji] = "{0} will be available at 12 AM"
         };
+
+        public static string GetStatusMessage(EStatus status)
+        {
+            return status.State switch
+            {
+                EState.Unavailable => $"{UnavailableEmoji} Unavailable",
+                EState.Maybe => $"{MaybeEmoji} Maybe Later",
+                EState.AvailableLater => getAvailableLaterStatus(status.TimeAvailable),
+                EState.Available => $"{AvailableEmoji} Available Now",
+                EState.Ready => $"{ReadyEmoji} Ready (In Voice)",
+                EState.Done => $"{SleepEmoji} {(status.TimeUpdated.Hour >= 20 || status.TimeUpdated.Hour <= 5 ? "Sleeeep" : "eeeed")}",
+                _ => $"{UnknownEmoji} Unknown",
+            };
+
+            static string getAvailableLaterStatus(DateTimeOffset time)
+            {
+                TimeSpan span = time - DateTimeOffset.Now;
+                bool late = span.Ticks < 0;
+                if (late)
+                {
+                    span = span.Negate();
+                }
+
+                return $"{(late ? Strings.LateEmoji : Strings.WaitingEmoji)} {(span.TotalHours >= 1 ? $"{(int)span.TotalHours} hour{(span.TotalHours >= 2 ? "s" : "")} " : "")}{span.Minutes} min{(span.Minutes != 1 ? "s" : "")}{(late ? " late" : "")}";
+            }
+        }
     }
 }

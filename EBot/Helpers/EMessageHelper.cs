@@ -124,7 +124,7 @@ namespace EBot.Helpers
                 message,
                 allowMultipleReactions: true,
                 anyoneCanInteract: true,
-                timeout: (int)TimeSpan.FromHours(4).TotalMilliseconds,
+                timeout: (int)(message.CreatedAt + TimeSpan.FromHours(4) - DateTimeOffset.Now).TotalMilliseconds,
                 actions: actionButtons,
                 onTimeout: () =>
                 {
@@ -229,15 +229,11 @@ namespace EBot.Helpers
         {
             foreach (ulong message in emessage.MessageIds)
             {
-                try
+                IMessage msg = await emessage.Channel.GetMessageAsync(message);
+                if (msg is IUserMessage ium)
                 {
-                    var msg = (IUserMessage)await emessage.Channel.GetMessageAsync(message);
-                    if (msg != null)
-                    {
-                        await msg.ModifyAsync((props) => props.Embed = GenerateEmbed(emessage).Build());
-                    }
+                    _ = ium.ModifyAsync(props => props.Embed = GenerateEmbed(emessage).Build());
                 }
-                catch { }
             }
         }
 
@@ -265,14 +261,9 @@ namespace EBot.Helpers
             var role = emessage.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
             if (role != null)
             {
-                if (status.State == EState.Available)
-                {
-                    _ = emessage.Guild.GetUser(userId).AddRoleAsync(role);
-                }
-                else
-                {
-                    _ = emessage.Guild.GetUser(userId).RemoveRoleAsync(role);
-                }
+                _ = status.State == EState.Available
+                    ? emessage.Guild.GetUser(userId).AddRoleAsync(role)
+                    : emessage.Guild.GetUser(userId).RemoveRoleAsync(role);
             }
 
             _ = UpdateEMessage(emessage);
@@ -290,14 +281,14 @@ namespace EBot.Helpers
         {
             EmbedBuilder builder = new EmbedBuilder();
             builder.Title = "eeee?";
-            builder.Description = $"{message.Creator.NicknameOrUsername()} proposes that we eeee{(message.ProposedTime == null ? "" : $" at {message.ProposedTime:h:mm tt}")}";
+            builder.Description = $"{message.Creator.NicknameOrUsername()} proposes that we eeee{(message.ProposedTime is null ? "" : $" at {message.ProposedTime:h:mm tt}")}";
 
             foreach (ulong user in message.Statuses.Keys.ToArray())
             {
                 string name = message.Guild.GetUser(user).NicknameOrUsername();
-                if (name == null) continue;
+                if (name is null) continue;
 
-                builder.AddField(name, getStatusMessage(message.Statuses[user]));
+                builder.AddField(name, Strings.GetStatusMessage(message.Statuses[user]));
             }
 
             builder.Color = getEmbedColor();
@@ -305,32 +296,6 @@ namespace EBot.Helpers
             builder.WithCurrentTimestamp();
 
             return builder;
-
-            string getStatusMessage(EStatus status)
-            {
-                return status.State switch
-                {
-                    EState.Unavailable => $"{Strings.UnavailableEmoji} Unavailable",
-                    EState.Maybe => $"{Strings.MaybeEmoji} Maybe Later",
-                    EState.AvailableLater => getAvailableLaterStatus(status.TimeAvailable),
-                    EState.Available => $"{Strings.AvailableEmoji} Available Now",
-                    EState.Ready => $"{Strings.ReadyEmoji} Ready (In Voice)",
-                    EState.Done => $"{Strings.SleepEmoji} {(status.TimeUpdated.Hour >= 20 || status.TimeUpdated.Hour <= 5 ? "Sleeeep" : "eeeed")}",
-                    _ => $"{Strings.UnknownEmoji} Unknown",
-                };
-            }
-
-            string getAvailableLaterStatus(DateTimeOffset time)
-            {
-                TimeSpan span = time - DateTimeOffset.Now;
-                bool late = span.Ticks < 0;
-                if (late)
-                {
-                    span = span.Negate();
-                }
-
-                return $"{(late ? Strings.LateEmoji : Strings.WaitingEmoji)} {(span.TotalHours >= 1 ? $"{(int)span.TotalHours} hour{(span.TotalHours >= 2 ? "s" : "")} " : "")}{span.Minutes} min{(span.Minutes != 1 ? "s" : "")}{(late ? " late" : "")}";
-            }
 
             Color getEmbedColor()
             {

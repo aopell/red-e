@@ -131,7 +131,7 @@ namespace EBot
             var ch = new CommandHandler(
                 MainInstance.Client,
                 new CommandService(
-                    new CommandServiceConfig()
+                    new CommandServiceConfig
                     {
                         CaseSensitiveCommands = false,
                         LogLevel = LogSeverity.Info
@@ -156,7 +156,7 @@ namespace EBot
             {
                 bool[] childCrossings = new bool[crossings.Length + 1];
                 Array.Copy(crossings, childCrossings, crossings.Length);
-                childCrossings[childCrossings.Length - 1] = (i < node.Children.Count - 1);
+                childCrossings[^1] = (i < node.Children.Count - 1);
                 Print(node.Children[i], childCrossings);
             }
         }
