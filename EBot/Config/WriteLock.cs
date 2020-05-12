@@ -1,14 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 
 namespace EBot.Config
 {
     public struct WriteLock : IDisposable
     {
-        private bool lockHeld;
-        private ReaderWriterLockSlim rwLock;
+        private readonly bool lockHeld;
+        private readonly ReaderWriterLockSlim rwLock;
 
         public WriteLock(ReaderWriterLockSlim rwLock)
         {
@@ -19,10 +17,7 @@ namespace EBot.Config
 
         public void Dispose()
         {
-            if (lockHeld)
-            {
-                rwLock.ExitWriteLock();
-            }
+            if (lockHeld) rwLock.ExitWriteLock();
         }
     }
 }

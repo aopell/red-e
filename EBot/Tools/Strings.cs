@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using EBot.Models;
 
 namespace EBot.Tools
@@ -62,12 +61,10 @@ namespace EBot.Tools
             {
                 TimeSpan span = time - DateTimeOffset.Now;
                 bool late = span.Ticks < 0;
-                if (late)
-                {
-                    span = span.Negate();
-                }
+                if (late) span = span.Negate();
 
-                return $"{(late ? Strings.LateEmoji : Strings.WaitingEmoji)} {(span.TotalHours >= 1 ? $"{(int)span.TotalHours} hour{(span.TotalHours >= 2 ? "s" : "")} " : "")}{span.Minutes} min{(span.Minutes != 1 ? "s" : "")}{(late ? " late" : "")}";
+                return
+                    $"{(late ? LateEmoji : WaitingEmoji)} {(span.TotalHours >= 1 ? $"{(int)span.TotalHours} hour{(span.TotalHours >= 2 ? "s" : "")} " : "")}{span.Minutes} min{(span.Minutes != 1 ? "s" : "")}{(late ? " late" : "")}";
             }
         }
     }

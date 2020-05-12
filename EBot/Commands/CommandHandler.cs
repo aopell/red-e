@@ -1,25 +1,20 @@
-﻿using Discord;
+﻿using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
+using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using System.Linq;
 using EBot;
 using EBot.Commands;
 using EBot.Helpers;
-using System.Text.RegularExpressions;
 
 namespace Ebot.Commands
 {
     public class CommandHandler
     {
+        private readonly DiscordBot bot;
         private readonly DiscordSocketClient client;
         private readonly CommandService commands;
-        private readonly DiscordBot bot;
 
         public CommandHandler(DiscordSocketClient client, CommandService commands, DiscordBot bot)
         {
@@ -41,8 +36,10 @@ namespace Ebot.Commands
             //
             // If you do not use Dependency Injection, pass null.
             // See Dependency Injection guide for more information.
-            await commands.AddModulesAsync(assembly: Assembly.GetEntryAssembly(),
-                                            services: null);
+            await commands.AddModulesAsync(
+                Assembly.GetEntryAssembly(),
+                null
+            );
         }
 
         private async Task HandleCommandAsync(SocketMessage messageParam)
@@ -55,9 +52,11 @@ namespace Ebot.Commands
 
             // Determine if the message is a command based on the prefix and make sure no bots trigger commands
             if (!(message.HasCharPrefix('-', ref argPos) ||
-                message.HasMentionPrefix(client.CurrentUser, ref argPos)) ||
+                  message.HasMentionPrefix(client.CurrentUser, ref argPos)) ||
                 message.Author.IsBot)
+            {
                 return;
+            }
 
             // Create a WebSocket-based command context based on the message
             var context = new BotCommandContext(client, message, bot);
@@ -68,10 +67,11 @@ namespace Ebot.Commands
             // Keep in mind that result does not indicate a return value
             // rather an object stating if the command executed successfully.
 
-            var result = await commands.ExecuteAsync(
-                context: context,
-                argPos: argPos,
-                services: null);
+            IResult result = await commands.ExecuteAsync(
+                context,
+                argPos,
+                null
+            );
 
             // Optionally, we may inform the user if the command fails
             // to be executed; however, this may not always be desired,
@@ -79,7 +79,7 @@ namespace Ebot.Commands
             // command.
             if (!result.IsSuccess)
             {
-                EmbedBuilder embed = new EmbedBuilder();
+                var embed = new EmbedBuilder();
                 embed.WithColor(Color.Red);
 
                 switch (result.Error)
@@ -89,17 +89,15 @@ namespace Ebot.Commands
                         return;
                     case CommandError.ParseFailed:
                     case CommandError.BadArgCount:
-                        var c = commands.Search(context, argPos).Commands.FirstOrDefault().Command;
+                        CommandInfo c = commands.Search(context, argPos).Commands.FirstOrDefault().Command;
                         string name = c.Name;
-                        var module = c.Module;
+                        ModuleInfo module = c.Module;
                         while (module != null)
                         {
-                            if (!string.IsNullOrEmpty(module.Group))
-                            {
-                                name = module.Group + " " + name;
-                            }
+                            if (!string.IsNullOrEmpty(module.Group)) name = module.Group + " " + name;
                             module = module.Parent;
                         }
+
                         embed.WithTitle("Incorrect Command Usage");
                         embed.WithDescription($"Error parsing command. Run `+help {name}` for more information.");
                         break;
@@ -119,7 +117,6 @@ namespace Ebot.Commands
 
                 await context.Channel.SendMessageAsync(embed: embed.Build());
             }
-
         }
     }
 }

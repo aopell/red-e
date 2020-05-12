@@ -14,10 +14,7 @@ namespace EBot.Helpers
 
         public static EStatus Unknown => EStatus.FromState(EState.Unknown);
 
-        public static EStatus AtTime(int hour, int minute = 0)
-        {
-            return AtTime(new TimeSpan(hour, minute, 0));
-        }
+        public static EStatus AtTime(int hour, int minute = 0) => AtTime(new TimeSpan(hour, minute, 0));
 
         public static EStatus AtTime(TimeSpan time)
         {
@@ -94,9 +91,9 @@ namespace EBot.Helpers
             {
                 ELexer.ID.TerminalTexttime => AtTime(TexttimeOffset(textOrHour.Value)),
                 ELexer.ID.TerminalHour
-                    when children.Count == 1 => AtTime(int.Parse(textOrHour.Value)),
+                when children.Count == 1 => AtTime(int.Parse(textOrHour.Value)),
                 ELexer.ID.TerminalHour
-                    when children.Count == 2 => AtTime(int.Parse(textOrHour.Value), int.Parse(children[1].Value)),
+                when children.Count == 2 => AtTime(int.Parse(textOrHour.Value), int.Parse(children[1].Value)),
                 _ => Unknown
             };
         }
