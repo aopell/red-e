@@ -8,14 +8,19 @@ using Newtonsoft.Json;
 
 namespace EBot.Models
 {
-    public class EMessage
+    public class EMessageMetadata
     {
-        public ulong CreatorId { get; }
-        public ulong ChannelId { get; }
-        public ulong GuildId { get; }
+        public Guid Id { get; protected set; }
+        public DateTimeOffset CreatedTimestamp { get; protected set; }
+        public ulong CreatorId { get; protected set; }
+        public ulong ChannelId { get; protected set; }
+        public ulong GuildId { get; protected set; }
+    }
+
+    public class EMessage : EMessageMetadata
+    {
         public List<ulong> MessageIds { get; }
         public Dictionary<ulong, EStatus> Statuses { get; }
-        public DateTimeOffset CreatedTimestamp { get; }
         public bool AvailablePeopleMentioned { get; set; }
 
         public DateTimeOffset? ProposedTime =>
@@ -31,6 +36,7 @@ namespace EBot.Models
 
         public EMessage(ulong creatorId, ulong channelId, ulong guildId, EStatus senderStatus, IEnumerable<ulong> users)
         {
+            Id = new Guid();
             CreatorId = creatorId;
             ChannelId = channelId;
             GuildId = guildId;
@@ -44,6 +50,7 @@ namespace EBot.Models
 
         [JsonConstructor]
         private EMessage(
+            Guid id,
             ulong creatorId,
             ulong channelId,
             ulong guildId,
@@ -53,6 +60,7 @@ namespace EBot.Models
             bool availablePeopleMentioned
         )
         {
+            Id = id;
             CreatorId = creatorId;
             ChannelId = channelId;
             GuildId = guildId;
@@ -82,54 +90,7 @@ namespace EBot.Models
                     return;
             }
 
-            await EMessageHelper.UpdateEStatus(rm.Channel.Id, sr.UserId, targetState, creatorStatus?.TimeAvailable ?? DateTimeOffset.MaxValue);
+            await EMessageHelper.UpdateEStatus(rm.Channel.Id, sr.UserId, targetState, creatorStatus?.TimeAvailable ?? DateTimeOffset.MaxValue, ChangeSource.EMessageReaction);
         }
-    }
-
-    public class EStatus
-    {
-        public EState State { get; private set; }
-        public DateTimeOffset TimeAvailable { get; private set; }
-        public DateTimeOffset TimeUpdated { get; }
-        public LateState Lateness { get; set; }
-
-        private EStatus() => TimeUpdated = DateTimeOffset.Now;
-
-        [JsonConstructor]
-        private EStatus(EState state, DateTimeOffset timeAvailable, DateTimeOffset timeUpdated, LateState lateness)
-        {
-            State = state;
-            TimeAvailable = timeAvailable;
-            TimeUpdated = timeUpdated;
-            Lateness = lateness;
-        }
-
-        public static EStatus FromState(EState state) => FromState(state, DateTimeOffset.MaxValue);
-
-        public static EStatus FromState(EState state, DateTimeOffset timeAvailable) =>
-            new EStatus
-            {
-                State = state,
-                TimeAvailable = state == EState.AvailableLater ? timeAvailable : DateTimeOffset.MaxValue
-            };
-    }
-
-    public enum EState
-    {
-        Unknown,
-        Unavailable,
-        Maybe,
-        AvailableLater,
-        Available,
-        Ready,
-        Done
-    }
-
-    public enum LateState
-    {
-        NotLate,
-        SlightlyLate,
-        Late,
-        VeryLate
     }
 }

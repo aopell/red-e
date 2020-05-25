@@ -39,11 +39,11 @@ namespace EBot.Helpers
             {
                 if (curr.VoiceChannel != null && curr.VoiceChannel.Id == DiscordBot.MainInstance.Options.VoiceTargetRoomId)
                 {
-                    await UpdateEStatuses(user.Id, EState.Ready);
+                    await UpdateEStatuses(user.Id, EState.Ready, ChangeSource.VoiceStatusChange);
                 }
                 else if (prev.VoiceChannel != null && prev.VoiceChannel.Id == DiscordBot.MainInstance.Options.VoiceTargetRoomId)
                 {
-                    await UpdateEStatuses(user.Id, EState.Done);
+                    await UpdateEStatuses(user.Id, EState.Done, ChangeSource.VoiceStatusChange);
                 }
             }
         }
@@ -75,6 +75,11 @@ namespace EBot.Helpers
         public static async Task CreateEMessage(ulong userId, ulong channelId, ulong guildId, EStatus senderStatus)
         {
             var emessage = new EMessage(userId, channelId, guildId, senderStatus, DiscordBot.MainInstance.Options.DefaultUsers);
+            DiscordBot.MainInstance.DataStore.SaveEMessage(emessage);
+            if (senderStatus != null)
+            {
+                DiscordBot.MainInstance.DataStore.SaveStatusChange(new EStatusChange(senderStatus, null, userId, emessage, ChangeSource.EMessageCreate));
+            }
 
             SocketRole role = emessage.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
             if (role != null)
@@ -106,17 +111,17 @@ namespace EBot.Helpers
         {
             var actionButtons = new List<(string, Func<ReactionMessage, SocketReaction, Task>)>
             {
-                (Strings.AvailableEmoji, (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Available)),
+                (Strings.AvailableEmoji, (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Available, ChangeSource.EMessageReaction)),
                 (Strings.AgreeEmoji, emessage.AgreeWithCreator),
-                (Strings.MaybeEmoji, (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Maybe)),
-                (Strings.UnavailableEmoji, (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Unavailable)),
-                (Strings.FiveMinutesEmoji, GenerateTimeOffsetAction(TimeSpan.FromMinutes(5))),
-                (Strings.FifteenMinutesEmoji, GenerateTimeOffsetAction(TimeSpan.FromMinutes(15))),
-                (Strings.OneHourEmoji, GenerateTimeOffsetAction(TimeSpan.FromHours(1))),
-                (Strings.TwoHoursEmoji, GenerateTimeOffsetAction(TimeSpan.FromHours(2))),
-                (Strings.TenOClockEmoji, GenerateTimeSetAction(DateTimeOffset.Parse("10:00 PM"))),
-                (Strings.ElevenOClockEmoji, GenerateTimeSetAction(DateTimeOffset.Parse("11:00 PM"))),
-                (Strings.TwelveOClockEmoji, GenerateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1)))
+                (Strings.MaybeEmoji, (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Maybe, ChangeSource.EMessageReaction)),
+                (Strings.UnavailableEmoji, (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Unavailable, ChangeSource.EMessageReaction)),
+                (Strings.FiveMinutesEmoji, GenerateTimeOffsetAction(TimeSpan.FromMinutes(5), ChangeSource.EMessageReaction)),
+                (Strings.FifteenMinutesEmoji, GenerateTimeOffsetAction(TimeSpan.FromMinutes(15), ChangeSource.EMessageReaction)),
+                (Strings.OneHourEmoji, GenerateTimeOffsetAction(TimeSpan.FromHours(1), ChangeSource.EMessageReaction)),
+                (Strings.TwoHoursEmoji, GenerateTimeOffsetAction(TimeSpan.FromHours(2), ChangeSource.EMessageReaction)),
+                (Strings.TenOClockEmoji, GenerateTimeSetAction(DateTimeOffset.Parse("10:00 PM"), ChangeSource.EMessageReaction)),
+                (Strings.ElevenOClockEmoji, GenerateTimeSetAction(DateTimeOffset.Parse("11:00 PM"), ChangeSource.EMessageReaction)),
+                (Strings.TwelveOClockEmoji, GenerateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1), ChangeSource.EMessageReaction))
             };
 
             ReactionMessageHelper.CreateReactionMessage(
@@ -134,12 +139,12 @@ namespace EBot.Helpers
             );
         }
 
-        private static Func<ReactionMessage, SocketReaction, Task> GenerateTimeSetAction(DateTimeOffset time)
+        private static Func<ReactionMessage, SocketReaction, Task> GenerateTimeSetAction(DateTimeOffset time, ChangeSource changeSource)
         {
-            return (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.AvailableLater, time);
+            return (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.AvailableLater, time, changeSource);
         }
 
-        private static Func<ReactionMessage, SocketReaction, Task> GenerateTimeOffsetAction(TimeSpan offset)
+        private static Func<ReactionMessage, SocketReaction, Task> GenerateTimeOffsetAction(TimeSpan offset, ChangeSource changeSource)
         {
             return (rm, sr) =>
             {
@@ -148,7 +153,8 @@ namespace EBot.Helpers
                     rm.Channel.Id,
                     sr.UserId,
                     EState.AvailableLater,
-                    (s != null && s.State == EState.AvailableLater ? s.TimeAvailable : DateTimeOffset.Now) + offset
+                    (s != null && s.State == EState.AvailableLater ? s.TimeAvailable : DateTimeOffset.Now) + offset,
+                    changeSource
                 );
             };
         }
@@ -213,19 +219,19 @@ namespace EBot.Helpers
                         (Strings.AvailableEmoji,
                          ReactionMessageHelper.EditMessageAndCall(
                              getStatus(),
-                             (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Available)
+                             (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Available, ChangeSource.ConfirmMessageReaction)
                          )),
                         (Strings.MaybeEmoji,
-                         ReactionMessageHelper.EditMessageAndCall(getStatus(), (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Maybe))),
+                         ReactionMessageHelper.EditMessageAndCall(getStatus(), (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Maybe, ChangeSource.ConfirmMessageReaction))),
                         (Strings.UnavailableEmoji,
                          ReactionMessageHelper.EditMessageAndCall(
                              getStatus(),
-                             (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Unavailable)
+                             (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Unavailable, ChangeSource.ConfirmMessageReaction)
                          )),
                         (Strings.FiveMinutesEmoji,
-                         ReactionMessageHelper.EditMessageAndCall(getStatus(), GenerateTimeOffsetAction(TimeSpan.FromMinutes(5)))),
+                         ReactionMessageHelper.EditMessageAndCall(getStatus(), GenerateTimeOffsetAction(TimeSpan.FromMinutes(5), ChangeSource.ConfirmMessageReaction))),
                         (Strings.FifteenMinutesEmoji,
-                         ReactionMessageHelper.EditMessageAndCall(getStatus(), GenerateTimeOffsetAction(TimeSpan.FromMinutes(15)))),
+                         ReactionMessageHelper.EditMessageAndCall(getStatus(), GenerateTimeOffsetAction(TimeSpan.FromMinutes(15), ChangeSource.ConfirmMessageReaction))),
                     },
                     timeout: (int)TimeSpan.FromMinutes(10).TotalMilliseconds,
                     onTimeout: () => { message.RemoveAllReactionsAsync(); }
@@ -249,31 +255,35 @@ namespace EBot.Helpers
             }
         }
 
-        public static async Task UpdateEStatus(ulong channelId, ulong userId, EState state)
+        public static async Task UpdateEStatus(ulong channelId, ulong userId, EState state, ChangeSource changeSource)
         {
-            await UpdateEStatus(channelId, userId, EStatus.FromState(state));
+            await UpdateEStatus(channelId, userId, EStatus.FromState(state), changeSource);
         }
 
-        public static async Task UpdateEStatus(ulong channelId, ulong userId, EState state, DateTimeOffset timeAvailable)
+        public static async Task UpdateEStatus(ulong channelId, ulong userId, EState state, DateTimeOffset timeAvailable, ChangeSource changeSource)
         {
-            await UpdateEStatus(channelId, userId, EStatus.FromState(state, timeAvailable));
+            await UpdateEStatus(channelId, userId, EStatus.FromState(state, timeAvailable), changeSource);
         }
 
-        public static async Task UpdateEStatus(ulong channelId, ulong userId, EStatus status)
+        public static async Task UpdateEStatus(ulong channelId, ulong userId, EStatus status, ChangeSource changeSource)
         {
             EMessage emessage = EMessages.GetValueOrDefault(channelId);
             if (emessage == null) return;
-            if ((emessage.Statuses.GetValueOrDefault(userId)?.State ?? EState.Unknown) == EState.Ready && status.State != EState.Done) return;
+            EStatus prev = emessage.Statuses.GetValueOrDefault(userId);
+            if ((prev?.State ?? EState.Unknown) == EState.Ready && status.State != EState.Done) return;
 
             await DiscordBot.MainInstance.Log(
-                new LogMessage(
-                    LogSeverity.Info,
-                    "UpdateEStatus",
-                    $"{userId} updated estatus to {status.State} at time {status.TimeAvailable}"
-                )
-            );
+                                 new LogMessage(
+                                     LogSeverity.Info,
+                                     "UpdateEStatus",
+                                     $"{userId} updated estatus to {status.State} at time {status.TimeAvailable}"
+                                 )
+                             );
 
             emessage.Statuses[userId] = status;
+
+            DiscordBot.MainInstance.DataStore.SaveStatusChange(new EStatusChange(status, prev, userId, emessage, changeSource));
+
             SaveEMessages();
 
             SocketRole role = emessage.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
@@ -287,9 +297,9 @@ namespace EBot.Helpers
             _ = UpdateEMessage(emessage);
         }
 
-        public static async Task UpdateEStatuses(ulong userId, EState state)
+        public static async Task UpdateEStatuses(ulong userId, EState state, ChangeSource changeSource)
         {
-            foreach (ulong id in EMessages.Keys.ToArray()) await UpdateEStatus(id, userId, state);
+            foreach (ulong id in EMessages.Keys.ToArray()) await UpdateEStatus(id, userId, state, changeSource);
         }
 
         private static EmbedBuilder GenerateEmbed(EMessage message)
