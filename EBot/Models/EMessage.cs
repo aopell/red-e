@@ -15,6 +15,17 @@ namespace EBot.Models
         public ulong CreatorId { get; protected set; }
         public ulong ChannelId { get; protected set; }
         public ulong GuildId { get; protected set; }
+
+        public EMessageMetadata() { }
+
+        public EMessageMetadata(EMessage emessage)
+        {
+            Id = emessage.Id;
+            CreatedTimestamp = emessage.CreatedTimestamp;
+            CreatorId = emessage.CreatorId;
+            ChannelId = emessage.ChannelId;
+            GuildId = emessage.GuildId;
+        }
     }
 
     public class EMessage : EMessageMetadata
@@ -34,9 +45,11 @@ namespace EBot.Models
 
         [JsonIgnore] public SocketGuild Guild => DiscordBot.MainInstance.Client.GetGuild(GuildId);
 
+        [JsonIgnore] public EMessageMetadata Metadata => new EMessageMetadata(this);
+
         public EMessage(ulong creatorId, ulong channelId, ulong guildId, EStatus senderStatus, IEnumerable<ulong> users)
         {
-            Id = new Guid();
+            Id = Guid.NewGuid();
             CreatorId = creatorId;
             ChannelId = channelId;
             GuildId = guildId;

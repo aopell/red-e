@@ -16,7 +16,7 @@ namespace EBot.Data
         {
             using var db = new LiteDatabase(FilePath);
             var emessages = db.GetCollection<EMessageMetadata>(EMessageCollectionName);
-            emessages.Insert(emessage);
+            emessages.Insert(emessage is EMessage e ? e.Metadata : emessage);
         }
 
         public void SaveStatusChange(EStatusChange statusChange)
