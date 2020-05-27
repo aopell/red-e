@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using EBot.Models;
-using Newtonsoft.Json;
 
 namespace EBot.Config
 {

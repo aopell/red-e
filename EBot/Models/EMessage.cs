@@ -18,7 +18,7 @@ namespace EBot.Models
 
         public EMessageMetadata() { }
 
-        public EMessageMetadata(EMessage emessage)
+        public EMessageMetadata(EMessageMetadata emessage)
         {
             Id = emessage.Id;
             CreatedTimestamp = emessage.CreatedTimestamp;
@@ -36,8 +36,8 @@ namespace EBot.Models
 
         public DateTimeOffset? ProposedTime =>
             (Statuses.GetValueOrDefault(CreatorId)?.TimeAvailable ?? DateTimeOffset.MaxValue) == DateTimeOffset.MaxValue
-                ? (DateTimeOffset?)null
-                : Statuses.GetValueOrDefault(CreatorId).TimeAvailable;
+                ? null
+                : Statuses.GetValueOrDefault(CreatorId)?.TimeAvailable;
 
         [JsonIgnore] public IUser Creator => DiscordBot.MainInstance.Client.GetUser(CreatorId);
 
@@ -103,7 +103,13 @@ namespace EBot.Models
                     return;
             }
 
-            await EMessageHelper.UpdateEStatus(rm.Channel.Id, sr.UserId, targetState, creatorStatus?.TimeAvailable ?? DateTimeOffset.MaxValue, ChangeSource.EMessageReaction);
+            await EMessageHelper.UpdateEStatus(
+                rm.Channel.Id,
+                sr.UserId,
+                targetState,
+                creatorStatus?.TimeAvailable ?? DateTimeOffset.MaxValue,
+                ChangeSource.EMessageReaction
+            );
         }
     }
 }

@@ -78,7 +78,9 @@ namespace EBot.Helpers
             DiscordBot.MainInstance.DataStore.SaveEMessage(emessage);
             if (senderStatus != null)
             {
-                DiscordBot.MainInstance.DataStore.SaveStatusChange(new EStatusChange(senderStatus, null, userId, emessage, ChangeSource.EMessageCreate));
+                DiscordBot.MainInstance.DataStore.SaveStatusChange(
+                    new EStatusChange(senderStatus, null, userId, emessage, ChangeSource.EMessageCreate)
+                );
             }
 
             SocketRole role = emessage.Guild.Roles.FirstOrDefault(x => x.Name == DiscordBot.MainInstance.Options.AvailableRoleName);
@@ -121,7 +123,8 @@ namespace EBot.Helpers
                 (Strings.TwoHoursEmoji, GenerateTimeOffsetAction(TimeSpan.FromHours(2), ChangeSource.EMessageReaction)),
                 (Strings.TenOClockEmoji, GenerateTimeSetAction(DateTimeOffset.Parse("10:00 PM"), ChangeSource.EMessageReaction)),
                 (Strings.ElevenOClockEmoji, GenerateTimeSetAction(DateTimeOffset.Parse("11:00 PM"), ChangeSource.EMessageReaction)),
-                (Strings.TwelveOClockEmoji, GenerateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1), ChangeSource.EMessageReaction))
+                (Strings.TwelveOClockEmoji,
+                 GenerateTimeSetAction(DateTimeOffset.Parse("12:00 AM") + TimeSpan.FromDays(1), ChangeSource.EMessageReaction))
             };
 
             ReactionMessageHelper.CreateReactionMessage(
@@ -222,16 +225,25 @@ namespace EBot.Helpers
                              (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Available, ChangeSource.ConfirmMessageReaction)
                          )),
                         (Strings.MaybeEmoji,
-                         ReactionMessageHelper.EditMessageAndCall(getStatus(), (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Maybe, ChangeSource.ConfirmMessageReaction))),
+                         ReactionMessageHelper.EditMessageAndCall(
+                             getStatus(),
+                             (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Maybe, ChangeSource.ConfirmMessageReaction)
+                         )),
                         (Strings.UnavailableEmoji,
                          ReactionMessageHelper.EditMessageAndCall(
                              getStatus(),
                              (rm, sr) => UpdateEStatus(rm.Channel.Id, sr.UserId, EState.Unavailable, ChangeSource.ConfirmMessageReaction)
                          )),
                         (Strings.FiveMinutesEmoji,
-                         ReactionMessageHelper.EditMessageAndCall(getStatus(), GenerateTimeOffsetAction(TimeSpan.FromMinutes(5), ChangeSource.ConfirmMessageReaction))),
+                         ReactionMessageHelper.EditMessageAndCall(
+                             getStatus(),
+                             GenerateTimeOffsetAction(TimeSpan.FromMinutes(5), ChangeSource.ConfirmMessageReaction)
+                         )),
                         (Strings.FifteenMinutesEmoji,
-                         ReactionMessageHelper.EditMessageAndCall(getStatus(), GenerateTimeOffsetAction(TimeSpan.FromMinutes(15), ChangeSource.ConfirmMessageReaction))),
+                         ReactionMessageHelper.EditMessageAndCall(
+                             getStatus(),
+                             GenerateTimeOffsetAction(TimeSpan.FromMinutes(15), ChangeSource.ConfirmMessageReaction)
+                         )),
                     },
                     timeout: (int)TimeSpan.FromMinutes(10).TotalMilliseconds,
                     onTimeout: () => { message.RemoveAllReactionsAsync(); }
@@ -273,12 +285,12 @@ namespace EBot.Helpers
             if ((prev?.State ?? EState.Unknown) == EState.Ready && status.State != EState.Done) return;
 
             await DiscordBot.MainInstance.Log(
-                                 new LogMessage(
-                                     LogSeverity.Info,
-                                     "UpdateEStatus",
-                                     $"{userId} updated estatus to {status.State} at time {status.TimeAvailable}"
-                                 )
-                             );
+                new LogMessage(
+                    LogSeverity.Info,
+                    "UpdateEStatus",
+                    $"{userId} updated estatus to {status.State} at time {status.TimeAvailable}"
+                )
+            );
 
             emessage.Statuses[userId] = status;
 
