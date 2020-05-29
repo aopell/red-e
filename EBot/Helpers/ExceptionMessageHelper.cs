@@ -13,9 +13,9 @@ namespace EBot.Helpers
         {
             var embed = new EmbedBuilder();
             var trace = new StackTrace(ex, true);
-            var fileNames = trace.GetFrame(0).GetFileName().Split('/', '\\');
-            string fileName = fileNames?[fileNames.Length - 1];
-            int lineNo = trace.GetFrame(0).GetFileLineNumber();
+            var fileNames = trace.GetFrame(0)?.GetFileName()?.Split('/', '\\');
+            string fileName = fileNames?[^1];
+            int? lineNo = trace.GetFrame(0)?.GetFileLineNumber();
 
             if (ex is CommandExecutionException cee)
             {

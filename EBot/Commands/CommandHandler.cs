@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
@@ -27,6 +28,8 @@ namespace Ebot.Commands
         {
             // Hook the MessageReceived event into our command handler
             client.MessageReceived += HandleCommandAsync;
+
+            commands.AddTypeReader<Guid>(new GuidTypeReader());
 
             // Here we discover all of the command modules in the entry 
             // assembly and load them. Starting from Discord.NET 2.0, a

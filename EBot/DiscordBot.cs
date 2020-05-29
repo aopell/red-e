@@ -15,7 +15,7 @@ namespace EBot
     {
         public static DiscordBot MainInstance;
         public DiscordSocketClient Client { get; private set; }
-        public IDataStore DataStore { get; } = new LiteDbDataStore();
+        public IDataStore DataStore { get; } = new LiteDbDataStore("edata.db");
         public Secret Secret { get; private set; }
         public Options Options { get; private set; }
         public EMessages EMessages { get; private set; }

@@ -27,6 +27,8 @@ namespace EBot.Models
             PrevTimeAvailable = prev?.TimeAvailable;
             ChangeSource = changeSource;
         }
+
+        public EStatusChange() { }
     }
 
     public enum ChangeSource

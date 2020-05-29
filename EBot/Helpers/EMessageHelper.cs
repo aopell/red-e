@@ -245,7 +245,7 @@ namespace EBot.Helpers
                              GenerateTimeOffsetAction(TimeSpan.FromMinutes(15), ChangeSource.ConfirmMessageReaction)
                          )),
                     },
-                    timeout: (int)TimeSpan.FromMinutes(10).TotalMilliseconds,
+                    timeout: (int)TimeSpan.FromMinutes(20).TotalMilliseconds,
                     onTimeout: () => { message.RemoveAllReactionsAsync(); }
                 );
             }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using EBot.Models;
 using LiteDB;
 
@@ -7,9 +8,14 @@ namespace EBot.Data
 {
     public class LiteDbDataStore : IDataStore
     {
-        private const string FilePath = "edata.db";
+        private string FilePath { get; }
         private const string EMessageCollectionName = "emessages";
         private const string StatusChangeCollectionName = "statuses";
+
+        public LiteDbDataStore(string filePath)
+        {
+            FilePath = filePath;
+        }
 
         public void SaveEMessage(EMessageMetadata emessage)
         {
@@ -30,15 +36,16 @@ namespace EBot.Data
             using var db = new LiteDatabase(FilePath);
             var statuses = db.GetCollection<EStatusChange>(StatusChangeCollectionName);
             statuses.EnsureIndex(x => x.EMessage);
-            return statuses.Find(x => x.EMessage == emessageId);
+            return statuses.Find(x => x.EMessage == emessageId).ToList();
         }
 
-        public IEnumerable<EMessageMetadata> GetEMessages(DateTimeOffset date, TimeSpan searchRadius)
+        public IEnumerable<EMessageMetadata> GetEMessages(DateTimeOffset date)
         {
             using var db = new LiteDatabase(FilePath);
             var emessages = db.GetCollection<EMessageMetadata>(EMessageCollectionName);
             emessages.EnsureIndex(x => x.CreatedTimestamp);
-            return emessages.Find(x => x.CreatedTimestamp >= date - searchRadius && x.CreatedTimestamp <= date + searchRadius);
+            var all = emessages.FindAll();
+            return all.Where(x => x.CreatedTimestamp.LocalDateTime.Date == date.LocalDateTime.Date).ToList();
         }
 
         public EMessageMetadata GetEMessage(Guid emessageId)
