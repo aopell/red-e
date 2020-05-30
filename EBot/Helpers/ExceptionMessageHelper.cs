@@ -1,11 +1,9 @@
-﻿using Discord;
+﻿using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
+using Discord;
 using Discord.WebSocket;
 using EBot.Commands;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EBot.Helpers
 {
@@ -13,11 +11,11 @@ namespace EBot.Helpers
     {
         public static async Task HandleException(Exception ex, ISocketMessageChannel channel)
         {
-            EmbedBuilder embed = new EmbedBuilder();
-            StackTrace trace = new StackTrace(ex, true);
-            string[] fileNames = trace.GetFrame(0).GetFileName().Split('/', '\\');
-            string fileName = fileNames?[fileNames.Length - 1];
-            int lineNo = trace.GetFrame(0).GetFileLineNumber();
+            var embed = new EmbedBuilder();
+            var trace = new StackTrace(ex, true);
+            var fileNames = trace.GetFrame(0)?.GetFileName()?.Split('/', '\\');
+            string fileName = fileNames?[^1];
+            int? lineNo = trace.GetFrame(0)?.GetFileLineNumber();
 
             if (ex is CommandExecutionException cee)
             {
@@ -32,7 +30,9 @@ namespace EBot.Helpers
             {
                 embed.WithTitle("Internal Error");
                 embed.WithColor(Color.Red);
-                embed.WithDescription($"An internal error has occurred while executing this command. More error details have been supplied below.\n\n{ex.Message}");
+                embed.WithDescription(
+                    $"An internal error has occurred while executing this command. More error details have been supplied below.\n\n{ex.Message}"
+                );
                 embed.WithFooter($"{ex.GetType().Name}" + (fileName == null ? "" : $" at {fileName}:{lineNo}"));
             }
 

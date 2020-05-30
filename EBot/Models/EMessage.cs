@@ -1,103 +1,115 @@
-using Discord;
-using Discord.WebSocket;
-using EBot.Commands;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Threading.Tasks;
+using Discord;
+using Discord.WebSocket;
+using EBot.Helpers;
+using Newtonsoft.Json;
 
 namespace EBot.Models
 {
-    public class EMessage
+    public class EMessageMetadata
     {
-        public ulong CreatorId { get; private set; }
-        public ulong ChannelId { get; private set; }
-        public ulong GuildId { get; private set; }
-        public List<ulong> MessageIds { get; private set; }
-        public Dictionary<ulong, EStatus> Statuses { get; private set; }
-        public DateTimeOffset CreatedTimestamp { get; private set; }
-        public DateTimeOffset? ProposedTime { get; private set; }
+        public Guid Id { get; protected set; }
+        public DateTimeOffset CreatedTimestamp { get; protected set; }
+        public ulong CreatorId { get; protected set; }
+        public ulong ChannelId { get; protected set; }
+        public ulong GuildId { get; protected set; }
 
-        [JsonIgnore]
-        public IUser Creator => DiscordBot.MainInstance.Client.GetUser(CreatorId);
-        [JsonIgnore]
-        public ISocketMessageChannel Channel => (ISocketMessageChannel)DiscordBot.MainInstance.Client.GetChannel(ChannelId);
-        [JsonIgnore]
-        public SocketGuild Guild => DiscordBot.MainInstance.Client.GetGuild(GuildId);
+        public EMessageMetadata() { }
+
+        public EMessageMetadata(EMessageMetadata emessage)
+        {
+            Id = emessage.Id;
+            CreatedTimestamp = emessage.CreatedTimestamp;
+            CreatorId = emessage.CreatorId;
+            ChannelId = emessage.ChannelId;
+            GuildId = emessage.GuildId;
+        }
+    }
+
+    public class EMessage : EMessageMetadata
+    {
+        public List<ulong> MessageIds { get; }
+        public Dictionary<ulong, EStatus> Statuses { get; }
+        public bool AvailablePeopleMentioned { get; set; }
+
+        public DateTimeOffset? ProposedTime =>
+            (Statuses.GetValueOrDefault(CreatorId)?.TimeAvailable ?? DateTimeOffset.MaxValue) == DateTimeOffset.MaxValue
+                ? null
+                : Statuses.GetValueOrDefault(CreatorId)?.TimeAvailable;
+
+        [JsonIgnore] public IUser Creator => DiscordBot.MainInstance.Client.GetUser(CreatorId);
+
+        [JsonIgnore] public ISocketMessageChannel Channel => (ISocketMessageChannel)DiscordBot.MainInstance.Client.GetChannel(ChannelId);
+
+        [JsonIgnore] public SocketGuild Guild => DiscordBot.MainInstance.Client.GetGuild(GuildId);
+
+        [JsonIgnore] public EMessageMetadata Metadata => new EMessageMetadata(this);
 
         public EMessage(ulong creatorId, ulong channelId, ulong guildId, EStatus senderStatus, IEnumerable<ulong> users)
         {
+            Id = Guid.NewGuid();
             CreatorId = creatorId;
             ChannelId = channelId;
             GuildId = guildId;
             MessageIds = new List<ulong>();
-            ProposedTime = senderStatus?.TimeAvailable;
             Statuses = new Dictionary<ulong, EStatus>();
             CreatedTimestamp = DateTimeOffset.Now;
-            foreach (ulong user in users)
-            {
-                Statuses[user] = EStatus.FromState(EState.Unknown);
-            }
-            if (senderStatus != null)
-            {
-                Statuses[creatorId] = senderStatus;
-            }
+            AvailablePeopleMentioned = false;
+            foreach (ulong user in users) Statuses[user] = EStatus.FromState(EState.Unknown);
+            if (senderStatus != null) Statuses[creatorId] = senderStatus;
         }
 
         [JsonConstructor]
-        private EMessage(ulong creatorId, ulong channelId, ulong guildId, List<ulong> messageIds, Dictionary<ulong, EStatus> statuses, DateTimeOffset createdTimestamp, DateTimeOffset? proposedTime)
+        private EMessage(
+            Guid id,
+            ulong creatorId,
+            ulong channelId,
+            ulong guildId,
+            List<ulong> messageIds,
+            Dictionary<ulong, EStatus> statuses,
+            DateTimeOffset createdTimestamp,
+            bool availablePeopleMentioned
+        )
         {
+            Id = id;
             CreatorId = creatorId;
             ChannelId = channelId;
             GuildId = guildId;
             MessageIds = messageIds;
             Statuses = statuses;
             CreatedTimestamp = createdTimestamp;
-            ProposedTime = proposedTime;
-        }
-    }
-
-    public class EStatus
-    {
-        public EState State { get; private set; }
-        public DateTimeOffset TimeAvailable { get; private set; }
-        public DateTimeOffset TimeUpdated { get; private set; }
-        public bool ShamedForLateness { get; set; } = false;
-
-        private EStatus()
-        {
-            TimeUpdated = DateTimeOffset.Now;
+            AvailablePeopleMentioned = availablePeopleMentioned;
         }
 
-        [JsonConstructor]
-        private EStatus(EState state, DateTimeOffset timeAvailable, DateTimeOffset timeUpdated, bool shamedForLateness)
+        public async Task AgreeWithCreator(ReactionMessage rm, SocketReaction sr)
         {
-            State = state;
-            TimeAvailable = timeAvailable;
-            TimeUpdated = timeUpdated;
-            ShamedForLateness = shamedForLateness;
-        }
-
-        public static EStatus FromState(EState state) => FromState(state, DateTimeOffset.MaxValue);
-
-        public static EStatus FromState(EState state, DateTimeOffset timeAvailable)
-        {
-            return new EStatus
+            EStatus creatorStatus = Statuses.GetValueOrDefault(CreatorId);
+            EState targetState = creatorStatus?.State ?? EState.Unknown;
+            switch (targetState)
             {
-                State = state,
-                TimeAvailable = state == EState.AvailableLater ? timeAvailable : DateTimeOffset.Now
-            };
-        }
-    }
+                case EState.Maybe:
+                case EState.Unavailable:
+                case EState.AvailableLater:
+                case EState.Available:
+                    break;
+                case EState.Ready:
+                    targetState = EState.Available;
+                    break;
+                case EState.Unknown:
+                case EState.Done:
+                default:
+                    return;
+            }
 
-    public enum EState
-    {
-        Unknown,
-        Unavailable,
-        Maybe,
-        AvailableLater,
-        Available,
-        Ready,
-        Done
+            await EMessageHelper.UpdateEStatus(
+                rm.Channel.Id,
+                sr.UserId,
+                targetState,
+                creatorStatus?.TimeAvailable ?? DateTimeOffset.MaxValue,
+                ChangeSource.EMessageReaction
+            );
+        }
     }
 }

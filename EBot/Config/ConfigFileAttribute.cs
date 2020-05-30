@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace EBot.Config
 {
@@ -8,9 +6,6 @@ namespace EBot.Config
     {
         public string FileName { get; }
 
-        public ConfigFileAttribute(string fileName)
-        {
-            FileName = fileName;
-        }
+        public ConfigFileAttribute(string fileName) => FileName = fileName;
     }
 }

@@ -1,14 +1,18 @@
 {
   "DefaultUsers": [
-    85877191371427840,
-    136711083313463296,
-    136710962269913088,
-    136709697125220352,
-    213879682452553729
   ],
   "VoiceWaitingRoomId": 136711405356318722,
   "VoiceTargetRoomId": 229828751104540672,
   "ShameMessages": [
+    "{0}, liar.",
+    "{0}, we're waiting",
+    "{0}, take your time, it's okay",
+    "{0}, could you be any slower?",
+    "{0}, what's taking you so long?",
+    "{0}, hurry up!",
+    "{0}, get in here!"
+  ],
+  "SuperShameMessages": [
     "{0}, liar.",
     "{0}, we're waiting",
     "{0}, take your time, it's okay",

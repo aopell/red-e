@@ -1,10 +1,7 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Reflection;
-using System.Text;
 using System.Threading;
+using Newtonsoft.Json;
 
 namespace EBot.Config
 {
@@ -13,10 +10,7 @@ namespace EBot.Config
         private ReaderWriterLockSlim rwLock { get; }
         private string fileName => GetType().GetCustomAttribute<ConfigFileAttribute>().FileName;
 
-        protected Config()
-        {
-            rwLock = new ReaderWriterLockSlim();
-        }
+        protected Config() => rwLock = new ReaderWriterLockSlim();
 
         public void SaveConfig()
         {

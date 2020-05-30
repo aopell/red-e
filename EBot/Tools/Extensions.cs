@@ -1,15 +1,18 @@
-﻿using Discord;
-using Discord.WebSocket;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading.Tasks;
+using Discord;
+using Discord.WebSocket;
 
 namespace EBot.Tools
 {
     public static class Extensions
     {
-        public static string NicknameOrUsername(this SocketGuild guild, ulong userId) => NicknameOrUsername(guild.GetUser(userId));
+        public static string NicknameOrUsername(this SocketGuild guild, ulong userId) => guild.GetUser(userId).NicknameOrUsername();
+
+        public static async Task<string> NicknameOrUsername(this IGuild guild, ulong userId) =>
+            guild is SocketGuild iguild ? iguild.NicknameOrUsername(userId) : (await guild.GetUserAsync(userId)).NicknameOrUsername();
 
         public static string NicknameOrUsername(this IUser user)
         {

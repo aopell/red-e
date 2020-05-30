@@ -1,13 +1,11 @@
-﻿using EBot.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
+using EBot.Models;
 
 namespace EBot.Config
 {
     [ConfigFile("config/emessages.json")]
     public class EMessages : Config
     {
-        public Dictionary<ulong, EMessage> Messages { get; private set; } = new Dictionary<ulong, EMessage>();
+        public Dictionary<ulong, EMessage> Messages { get; set; } = new Dictionary<ulong, EMessage>();
     }
 }

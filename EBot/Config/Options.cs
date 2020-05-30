@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace EBot.Config
 {
@@ -12,5 +10,6 @@ namespace EBot.Config
         public ulong VoiceTargetRoomId { get; set; }
         public string[] ShameMessages { get; set; }
         public string AvailableRoleName { get; set; }
+        public string[] SuperShameMessages { get; set; }
     }
 }

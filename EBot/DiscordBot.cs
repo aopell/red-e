@@ -1,21 +1,21 @@
-﻿using Discord;
+﻿using System;
+using System.Threading.Tasks;
+using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Ebot.Commands;
 using EBot.Config;
+using EBot.Data;
 using EBot.Helpers;
 using Hime.Redist;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EBot
 {
     public class DiscordBot
     {
-        public static DiscordBot MainInstance = null;
+        public static DiscordBot MainInstance;
         public DiscordSocketClient Client { get; private set; }
+        public IDataStore DataStore { get; } = new LiteDbDataStore("edata.db");
         public Secret Secret { get; private set; }
         public Options Options { get; private set; }
         public EMessages EMessages { get; private set; }
@@ -23,6 +23,7 @@ namespace EBot
         public static async Task Main()
         {
             #region Parser Test
+
             // var test = new string[]
             // {
             //     "can anyone e?",
@@ -109,6 +110,7 @@ namespace EBot
             //     }
             //     Console.WriteLine();
             // }
+
             #endregion
 
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
@@ -132,7 +134,7 @@ namespace EBot
             var ch = new CommandHandler(
                 MainInstance.Client,
                 new CommandService(
-                    new CommandServiceConfig()
+                    new CommandServiceConfig
                     {
                         CaseSensitiveCommands = false,
                         LogLevel = LogSeverity.Info
@@ -149,15 +151,21 @@ namespace EBot
         private static void Print(ASTNode node, bool[] crossings)
         {
             for (int i = 0; i < crossings.Length - 1; i++)
+            {
                 Console.Write(crossings[i] ? "|   " : "    ");
+            }
+
             if (crossings.Length > 0)
+            {
                 Console.Write("+-> ");
+            }
+
             Console.WriteLine(node.ToString());
             for (int i = 0; i != node.Children.Count; i++)
             {
-                bool[] childCrossings = new bool[crossings.Length + 1];
+                var childCrossings = new bool[crossings.Length + 1];
                 Array.Copy(crossings, childCrossings, crossings.Length);
-                childCrossings[childCrossings.Length - 1] = (i < node.Children.Count - 1);
+                childCrossings[^1] = i < node.Children.Count - 1;
                 Print(node.Children[i], childCrossings);
             }
         }
@@ -165,6 +173,7 @@ namespace EBot
         private Task Client_Ready()
         {
             _ = MinuteTimer();
+            _ = EMessageHelper.InitializeEMessages();
             return Task.CompletedTask;
         }
 
@@ -185,7 +194,7 @@ namespace EBot
 
         private async Task Client_ReactionAdded(Cacheable<IUserMessage, ulong> cachedMessage, ISocketMessageChannel channel, SocketReaction reaction)
         {
-            var message = await cachedMessage.GetOrDownloadAsync();
+            IUserMessage message = await cachedMessage.GetOrDownloadAsync();
             await ReactionMessageHelper.HandleReactionMessage(channel, Client.CurrentUser, reaction, message);
         }
 

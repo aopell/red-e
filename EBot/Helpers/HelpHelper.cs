@@ -1,45 +1,43 @@
-﻿using Discord.Commands;
-using EBot.Commands;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
+using Discord.Commands;
+using EBot.Commands;
+using ParameterInfo = System.Reflection.ParameterInfo;
 
 namespace EBot.Helpers
 {
     public static class HelpHelper
     {
-        private static List<HelpInfo> commands = null;
+        private static List<HelpInfo> commands;
         public static List<HelpInfo> AllCommands => commands ?? (commands = GetAllCommands());
 
         private static List<HelpInfo> GetAllCommands()
         {
-            List<HelpInfo> commands = new List<HelpInfo>();
+            var commands = new List<HelpInfo>();
 
             var modules = Assembly.GetExecutingAssembly().GetTypes().Where(t => !t.IsNested && t.IsSubclassOf(typeof(ModuleBase<BotCommandContext>)));
-            foreach (var module in modules)
-            {
-                commands.AddRange(GetAllCommands(module));
-            }
+            foreach (Type module in modules) commands.AddRange(GetAllCommands(module));
 
             return commands;
         }
 
         private static List<HelpInfo> GetAllCommands(Type module, string prefix = "")
         {
-            List<HelpInfo> infos = new List<HelpInfo>();
+            var infos = new List<HelpInfo>();
             if (Attribute.IsDefined(module, typeof(GroupAttribute)))
             {
                 var attr = module.GetCustomAttribute<GroupAttribute>();
                 prefix += attr.Prefix + " ";
             }
+
             var nestedTypes = module.GetNestedTypes().SelectMany(x => GetAllCommands(x, prefix));
             infos.AddRange(nestedTypes);
 
             var commands = module.GetMethods().Where(m => Attribute.IsDefined(m, typeof(CommandAttribute)));
 
-            foreach (var command in commands)
+            foreach (MethodInfo command in commands)
             {
                 var commandAttr = command.GetCustomAttribute<CommandAttribute>();
                 var summaryAttr = command.GetCustomAttribute<SummaryAttribute>();
@@ -50,12 +48,21 @@ namespace EBot.Helpers
 
             List<HelpParam> getParams(MethodInfo command)
             {
-                List<HelpParam> paramInfo = new List<HelpParam>();
-                foreach (var param in command.GetParameters())
+                var paramInfo = new List<HelpParam>();
+                foreach (ParameterInfo param in command.GetParameters())
                 {
                     var summaryAttr = param.GetCustomAttribute<SummaryAttribute>();
-                    paramInfo.Add(new HelpParam(param.Name, param.ParameterType.Name, summaryAttr?.Text, Attribute.IsDefined(param, typeof(RemainderAttribute)), param.HasDefaultValue ? (param.DefaultValue?.ToString() ?? "null") : null));
+                    paramInfo.Add(
+                        new HelpParam(
+                            param.Name,
+                            param.ParameterType.Name,
+                            summaryAttr?.Text,
+                            Attribute.IsDefined(param, typeof(RemainderAttribute)),
+                            param.HasDefaultValue ? param.DefaultValue?.ToString() ?? "null" : null
+                        )
+                    );
                 }
+
                 return paramInfo;
             }
         }
@@ -95,6 +102,8 @@ namespace EBot.Helpers
             DefaultValue = defaultValue;
         }
 
-        public override string ToString() => $"{(Optional ? "[" : "<")}{Name}{(Remainder ? "..." : "")}{(Optional && DefaultValue != "null" ? $" = {DefaultValue}" : "")}{(Optional ? "]" : ">")}".Trim();
+        public override string ToString() =>
+            $"{(Optional ? "[" : "<")}{Name}{(Remainder ? "..." : "")}{(Optional && DefaultValue != "null" ? $" = {DefaultValue}" : "")}{(Optional ? "]" : ">")}"
+                .Trim();
     }
 }
