@@ -115,6 +115,10 @@ namespace E
 			/// The unique identifier for terminal E
 			/// </summary>
 			public const int TerminalE = 0x001A;
+			/// <summary>
+			/// The unique identifier for terminal END
+			/// </summary>
+			public const int TerminalEnd = 0x001B;
 		}
 		/// <summary>
 		/// Contains the constant IDs for the contexts for this lexer
@@ -165,6 +169,10 @@ namespace E
 			/// The unique identifier for context start
 			/// </summary>
 			public const int Start = 0x000A;
+			/// <summary>
+			/// The unique identifier for context end
+			/// </summary>
+			public const int End = 0x000B;
 		}
 		/// <summary>
 		/// The collection of terminals matched by this lexer
@@ -199,13 +207,14 @@ namespace E
 			new Symbol(0x0018, "TEXTTIME"),
 			new Symbol(0x0019, "HOUR"),
 			new Symbol(0x001A, "E"),
-			new Symbol(0x0028, "now"),
-			new Symbol(0x002A, "hr"),
-			new Symbol(0x002B, " hour"),
-			new Symbol(0x002C, "s"),
-			new Symbol(0x0036, ":"),
-			new Symbol(0x003C, " "),
-			new Symbol(0x003D, "?") };
+			new Symbol(0x001B, "END"),
+			new Symbol(0x0029, "now"),
+			new Symbol(0x002B, "hr"),
+			new Symbol(0x002C, " hour"),
+			new Symbol(0x002D, "s"),
+			new Symbol(0x0037, ":"),
+			new Symbol(0x003D, "ing"),
+			new Symbol(0x003F, "?") };
 		/// <summary>
 		/// Initializes a new instance of the lexer
 		/// </summary>

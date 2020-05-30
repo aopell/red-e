@@ -61,10 +61,14 @@ grammar E
     context start {
       E -> (.* ' ')? ('e' | 'E')+;
     }
+
+    context end {
+      END -> ' '+ ('then' | 'yall' | 'y\'all');
+    }
   }
   rules
   { 
-    now -> #like { LIKE! } 'now'! | ;
+    now -> #like { LIKE!? } 'now'! | ;
 
     nn -> (NUMBER | INTEGER)^;
 
@@ -73,15 +77,15 @@ grammar E
     n -> (nn! #range { RANGE! })? nn #ish { ISH!? } (nhours | nminutes);
     a -> #one { AMINUTE | ANHOUR } #ish { ISH!? };
 
-    in -> #in { WITHIN! } #like { LIKE! } (n | a | #soon { INSOON } | INSOONISH);
+    in -> #in { WITHIN! } #like { LIKE!? } (n | a | #soon { INSOON } | INSOONISH);
 
     soon -> #soon { SOON! };
 
     soonish -> #soon { SOONISH! };
   
     time -> #time { TEXTTIME | HOUR (':'! MINUTE)? };
-    at -> #at { AT_OR_BEFORE! } #like { LIKE! } (time! #range { RANGE! })? time^;
+    at -> #at { AT_OR_BEFORE! } #like { LIKE!? } (time! #range { RANGE! })? time^;
     
-    prompt -> #start { E } (at | in | soon | soonish | TONIGHT | LATER | now) ' '!? '?'!+;
+    prompt -> #start { E } 'ing'!? (at | in | soon | soonish | TONIGHT | LATER | now) #end { END!? } '?'!+;
   }
 }
