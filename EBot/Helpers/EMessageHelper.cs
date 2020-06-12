@@ -97,7 +97,8 @@ namespace EBot.Helpers
 
         public static async Task CreateEMessage(EMessage emessage)
         {
-            RestUserMessage message = await emessage.Channel.SendMessageAsync(embed: GenerateEmbed(emessage).Build());
+            EmbedBuilder embedBuilder = await GenerateEmbed(emessage);
+            RestUserMessage message = await emessage.Channel.SendMessageAsync(embed: embedBuilder.Build());
             CreateEMessage(emessage, message);
         }
 
@@ -263,7 +264,8 @@ namespace EBot.Helpers
             foreach (ulong message in emessage.MessageIds)
             {
                 IMessage msg = await emessage.Channel.GetMessageAsync(message);
-                if (msg is IUserMessage ium) _ = ium.ModifyAsync(props => props.Embed = GenerateEmbed(emessage).Build());
+                EmbedBuilder embedBuilder = await GenerateEmbed(emessage);
+                if (msg is IUserMessage ium) _ = ium.ModifyAsync(props => props.Embed = embedBuilder.Build());
             }
         }
 
@@ -314,7 +316,7 @@ namespace EBot.Helpers
             foreach (ulong id in EMessages.Keys.ToArray()) await UpdateEStatus(id, userId, state, changeSource);
         }
 
-        private static EmbedBuilder GenerateEmbed(EMessage message)
+        private static async Task<EmbedBuilder> GenerateEmbed(EMessage message)
         {
             var builder = new EmbedBuilder();
             builder.Title = "eeee?";
@@ -326,7 +328,9 @@ namespace EBot.Helpers
                 string name = message.Guild.GetUser(user).NicknameOrUsername();
                 if (name is null) continue;
 
-                builder.AddField(name, Strings.GetStatusMessage(message.Statuses[user]));
+                string avatar = await AvatarEmojiHelper.getAvatarEmoji(user);
+
+                builder.AddField(avatar + " " + name, Strings.GetStatusMessage(message.Statuses[user]));
             }
 
             builder.Color = getEmbedColor();
