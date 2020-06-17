@@ -328,7 +328,7 @@ namespace EBot.Helpers
                 string name = message.Guild.GetUser(user).NicknameOrUsername();
                 if (name is null) continue;
 
-                string avatar = await AvatarEmojiHelper.getAvatarEmoji(user);
+                string avatar = await AvatarEmojiHelper.GetAvatarEmoji(user);
 
                 builder.AddField(avatar + " " + name, Strings.GetStatusMessage(message.Statuses[user]));
             }

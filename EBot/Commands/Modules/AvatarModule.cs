@@ -9,19 +9,23 @@ namespace EBot.Commands.Modules
     {
         [Command]
         [Summary("Gets an emojified version of your avatar")]
-        public async Task avatar()
+        public async Task Avatar()
         {
             // SocketUser user = Context.Guild.GetUser
-            string response = await AvatarEmojiHelper.getAvatarEmoji(Context.User.Id);
+            string response = await AvatarEmojiHelper.GetAvatarEmoji(Context.User.Id);
             _ = Context.Channel.SendMessageAsync(response);
         }
 
-        [Command("regenerate")]
-        [Summary("Force regenerates your avatar emoji")]
-        public async Task regenerate()
+        [Command("delete")]
+        [Summary("Deletes your avatar emoji")]
+        public async Task Delete()
         {
-            string response = await AvatarEmojiHelper.regenerateAvatarEmoji(Context.User.Id);
-            _ = Context.Channel.SendMessageAsync(response);
+            if(await AvatarEmojiHelper.DeleteAvatarEmoji(Context.User.Id))
+            {
+                _ = Context.Channel.SendMessageAsync("Successfuly deleted");
+                return;
+            }
+            _ = Context.Channel.SendMessageAsync("Could not find an emote to delete");
         }
     }
 }
