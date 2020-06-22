@@ -7,7 +7,7 @@ namespace EBot.Config
     {
         public List<ulong> DefaultUsers { get; set; }
         public ulong VoiceWaitingRoomId { get; set; }
-        public ulong VoiceTargetRoomId { get; set; }
+        public ulong[] VoiceTargetRoomIds { get; set; }
         public string[] ShameMessages { get; set; }
         public string AvailableRoleName { get; set; }
         public string[] SuperShameMessages { get; set; }

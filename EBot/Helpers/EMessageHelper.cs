@@ -37,11 +37,11 @@ namespace EBot.Helpers
         {
             if (prev.VoiceChannel != curr.VoiceChannel)
             {
-                if (curr.VoiceChannel != null && curr.VoiceChannel.Id == DiscordBot.MainInstance.Options.VoiceTargetRoomId)
+                if (curr.VoiceChannel != null && DiscordBot.MainInstance.Options.VoiceTargetRoomIds.Contains(curr.VoiceChannel.Id))
                 {
                     await UpdateEStatuses(user.Id, EState.Ready, ChangeSource.VoiceStatusChange);
                 }
-                else if (prev.VoiceChannel != null && prev.VoiceChannel.Id == DiscordBot.MainInstance.Options.VoiceTargetRoomId)
+                else if (prev.VoiceChannel != null && DiscordBot.MainInstance.Options.VoiceTargetRoomIds.Contains(prev.VoiceChannel.Id))
                 {
                     await UpdateEStatuses(user.Id, EState.Done, ChangeSource.VoiceStatusChange);
                 }
