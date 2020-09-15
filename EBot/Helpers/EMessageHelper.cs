@@ -321,7 +321,7 @@ namespace EBot.Helpers
             var builder = new EmbedBuilder();
             builder.Title = "eeee?";
             builder.Description =
-                $"{message.Creator.NicknameOrUsername()} proposes that we eeee{(message.ProposedTime is null ? "" : $" at {message.ProposedTime:h:mm tt}")}";
+                $"{message.Creator.NicknameOrUsername()} proposes that we eeee{(message.ProposedTime is null ? "" : $" at {TimeZoneInfo.ConvertTimeBySystemTimeZoneId(message.ProposedTime.Value, DiscordBot.MainInstance.Options.Timezone):h:mm tt}")}";
 
             foreach (ulong user in message.Statuses.Keys.ToArray())
             {

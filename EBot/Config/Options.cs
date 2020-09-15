@@ -12,5 +12,6 @@ namespace EBot.Config
         public string AvailableRoleName { get; set; }
         public string[] SuperShameMessages { get; set; }
         public ulong AvatarEmojiServer { get; set; }
+        public string Timezone { get; set; }
     }
 }
