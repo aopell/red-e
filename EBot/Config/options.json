@@ -22,5 +22,6 @@
     "{0}, get in here!"
   ],
   "AvailableRoleName": "eeeeeeee",
-  "AvatarEmojiServer": 706792003131670528
+  "AvatarEmojiServer": 706792003131670528,
+  "CommandPrefix": "-"
 }

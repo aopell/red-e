@@ -7,6 +7,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using EBot;
 using EBot.Commands;
+using EBot.Config;
 using EBot.Helpers;
 
 namespace Ebot.Commands
@@ -54,7 +55,7 @@ namespace Ebot.Commands
             int argPos = 0;
 
             // Determine if the message is a command based on the prefix and make sure no bots trigger commands
-            if (!(message.HasCharPrefix('-', ref argPos) ||
+            if (!(message.HasStringPrefix(bot.Options.CommandPrefix, ref argPos) ||
                   message.HasMentionPrefix(client.CurrentUser, ref argPos)) ||
                 message.Author.IsBot)
             {
@@ -102,7 +103,7 @@ namespace Ebot.Commands
                         }
 
                         embed.WithTitle("Incorrect Command Usage");
-                        embed.WithDescription($"Error parsing command. Run `+help {name}` for more information.");
+                        embed.WithDescription($"Error parsing command. Run `{bot.Options.CommandPrefix}help {name}` for more information.");
                         break;
                     case CommandError.UnmetPrecondition:
                         embed.WithTitle("Error Executing Command");
