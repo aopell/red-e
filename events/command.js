@@ -10,7 +10,7 @@ module.exports = {
 
         try {
             console.log(`Beginning execution of command: ${interaction.commandName}`);
-            await command.execute(interaction);
+            await command.execute(client, client.state, interaction);
             console.log(`Completed execution of command: ${interaction.commandName}`);
         } catch (error) {
             console.error(error);

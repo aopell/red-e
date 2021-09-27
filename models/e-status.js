@@ -1,6 +1,6 @@
 class EStatus {
     /**
-     * Creates a new EStatus
+     * Creates a new `EStatus`
      * @param {string} availability The availability level of this status update
      * @param {number} [timeAvailable] Time at which the status holder will be available
      */
@@ -12,7 +12,7 @@ class EStatus {
     }
 
     /**
-     * Creates an EStatus from a JSON object
+     * Creates an `EStatus` from a JSON object
      * @param {object} obj The object to deserialize
      * @returns {EStatus}
      */

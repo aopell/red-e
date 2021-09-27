@@ -1,8 +1,11 @@
+const { Embed } = require("@discordjs/builders");
+const ClientState = require("../state");
+const { nicknameOrUsername, getGuildMemberOrUser, discordTimestamp, getStatusMessage, getColorFromStatuses } = require("../util");
 const EStatus = require("./e-status");
 
 class EMessage {
     /**
-     * Creates a new EMessage
+     * Creates a new `EMessage`
      * @param {string} creatorId ID of the message creator
      * @param {string} channelId ID of the channel where the message was created
      * @param {string} guildId ID of the guild where the message was created
@@ -14,12 +17,13 @@ class EMessage {
         this.guildId = guildId;
         this.messageIds = [];
         this.statusLog = [senderStatus];
-        this.statuses = { creatorId: 0 };
+        this.statuses = { [creatorId]: 0 };
         this.creationTimestamp = Date.now();
+        this.lastUpdated = Date.now();
     }
 
     /**
-     * Creates an EMessage from a JSON object
+     * Creates an `EMessage` from a JSON object
      * @param {object} obj The object to deserialize
      * @returns {EMessage}
      */
@@ -32,7 +36,12 @@ class EMessage {
         emessage.statusLog = obj.statusLog.map(s => EStatus.fromJSON(s));
         emessage.statuses = obj.statuses;
         emessage.creationTimestamp = obj.creationTimestamp;
+        emessage.lastUpdated = obj.lastUpdated;
         return emessage;
+    }
+
+    get proposedTime() {
+        return this.getStatus(this.creatorId)?.creationTimestamp;
     }
 
     /**
@@ -50,14 +59,42 @@ class EMessage {
 
     /**
      * Updates the status for the provided user with the given status
+     * @param {ClientState} state The current client state
      * @param {string} userId ID of the user whose status to update
      * @param {EStatus} status the new status for that user
      * @returns {number} The index of the new status in the status log
      */
-    updateStatus(userId, status) {
+    updateStatus(state, userId, status) {
         const newLength = this.statusLog.push(status);
         this.statuses[userId] = newLength - 1;
+        this.lastUpdated = Date.now();
+        state.setEMessage(this.guildId, this.channelId, this);
         return newLength - 1;
+    }
+
+    toMessage(client) {
+        const user = getGuildMemberOrUser(client, this.guildId, this.creatorId);
+        const embed = new Embed()
+            .setTitle("eeee?")
+            .setDescription(`${nicknameOrUsername(user)} proposes that we eeee${this.proposedTime ? " " + discordTimestamp(this.proposedTime, "R") : ""}`);
+
+        const currentStatuses = [];
+        for (const userId in this.statuses) {
+            const name = nicknameOrUsername(getGuildMemberOrUser(client, this.guildId, userId));
+            const avatar = client.config?.avatoji?.[userId] ?? client.config?.avatoji?.default ?? "❓";
+            const s = this.getStatus(userId);
+            currentStatuses.push(s);
+            embed.addField({ name: `${avatar} ${name}`, value: getStatusMessage(client.config, s) });
+        }
+
+        embed.setColor(getColorFromStatuses(client.config, currentStatuses));
+        embed.setFooter({ text: "Last Updated" });
+        embed.setTimestamp(Date.now());
+
+        return {
+            embeds: [embed],
+            // components: [buttonsRow, selectRow],
+        };
     }
 }
 

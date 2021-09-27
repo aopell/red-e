@@ -1,5 +1,28 @@
 {
     "token": "Your Discord Bot Token",
     "guildId": "Testing Guild ID for slash commands",
-    "clientId": "Your Discord Application ID"
+    "clientId": "Your Discord Application ID",
+    "availabilityEmojis": {
+        "UNKNOWN": "<:unknown:706271972983701524>",
+        "UNAVAILABLE": "<:unavailable:706702240467124345>",
+        "MAYBE": "<:maybe:706702223446376517>",
+        "AVAILABLE_LATER": "⌛",
+        "AVAILABLE": "<:available:706270615312662568>",
+        "READY": "<:ready:706270984973451295>",
+        "DONE": "<:sleep:706705461486944348>",
+        "AGREE": "<:agree:707079412343898192>",
+        "FIVE_MINUTES": "<:fiveminutes:706000163738484756>",
+        "FIFTEEN_MINUTES": "<:fifteenminutes:706000163562323979>",
+        "ONE_HOUR": "<:onehour:706000163688153088>",
+        "TWO_HOURS": "<:twohours:706000163596009514>",
+        "TEN_O_CLOCK": "<:tenoclock:706000163801399346>",
+        "ELEVEN_O_CLOCK": "<:elevenoclock:706000163142893639>",
+        "TWELVE_O_CLOCK": "<:twelveoclock:706000163826565200>",
+        "LATE": "⏰"
+    },
+    "avatoji": {
+        "USER_ID": "EMOJI_ID",
+        "default": "👤"
+    },
+    "defaultTimezone": "America/Los_Angeles"
 }
