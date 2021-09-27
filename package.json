@@ -1,0 +1,28 @@
+{
+  "name": "e-bot",
+  "version": "1.0.0",
+  "description": "A Discord bot for keeping track of when people are available",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aopell/e-bot.git"
+  },
+  "author": "Aaron Opell",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/aopell/e-bot/issues"
+  },
+  "homepage": "https://github.com/aopell/e-bot#readme",
+  "dependencies": {
+    "@discordjs/builders": "^0.6.0",
+    "@discordjs/rest": "^0.1.0-canary.0",
+    "discord-api-types": "^0.23.1",
+    "discord.js": "^13.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^7.32.0"
+  }
+}
