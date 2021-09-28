@@ -1,9 +1,12 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const EMessage = require("../models/e-message");
 const EStatus = require("../models/e-status");
-// eslint-disable-next-line no-unused-vars
-const ClientState = require("../state");
 const { AvailabilityLevel } = require("../util");
+
+/**
+ * @typedef {import('../typedefs').Client} Client
+ * @typedef {import('discord.js').CommandInteraction} CommandInteraction
+ */
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -12,20 +15,21 @@ module.exports = {
 
     /**
      * Executes the command
-     * @param {object} client The current client
-     * @param {ClientState} state The current client state
-     * @param {object} interaction The interaction object
+     * @param {Client} client The current client
+     * @param {CommandInteraction} interaction The interaction object
      */
-    async execute(client, state, interaction) {
+    async execute(client, interaction) {
         const { channelId, guildId, user } = interaction;
-        // await interaction.reply({ content: "EEEE" });
-        let emessage = state.getEMessage(guildId, channelId);
-        console.log(emessage);
+        let emessage = client.state.getEMessage(guildId, channelId);
         if (!emessage) {
             emessage = new EMessage(user.id, channelId, guildId, new EStatus(AvailabilityLevel.UNKNOWN));
-            state.setEMessage(guildId, channelId, emessage);
+            client.state.setEMessage(guildId, channelId, emessage);
         }
 
-        interaction.reply({ ...emessage.toMessage(client), ephemeral: true });
+        const message = await interaction.reply({ ...(await emessage.toMessage(client)), ephemeral: false, fetchReply: true });
+        if (message) {
+            emessage.messageIds.push(message.id);
+            client.state.setEMessage(guildId, channelId, emessage);
+        }
     },
 };

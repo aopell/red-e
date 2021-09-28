@@ -1,16 +1,19 @@
 const fs = require("fs");
-// eslint-disable-next-line no-unused-vars
 const EMessage = require("./models/e-message");
+
+/**
+ * @typedef {import('discord.js').Snowflake} Snowflake
+ */
 
 class ClientState {
     /**
      * Creates a new `ClientState`
-     * @param {Map<string, Map<string, EMessage>} emessages `EMessage`s for all channels
+     * @param {Map<Snowflake, Map<Snowflake, EMessage>} emessages `EMessage`s for all channels
      */
     constructor(emessages) {
         /**
          * The `EMessage`s for all channels
-         * @type {Map<string, Map<string, EMessage>}
+         * @type {Map<Snowflake, Map<Snowflake, EMessage>}
          */
         this.EMessages = emessages ?? {};
     }
@@ -33,8 +36,8 @@ class ClientState {
 
     /**
      * Gets the `EMessage` associated with the guild and channel
-     * @param {string} guildId The guild that contains the channel
-     * @param {string} channelId The channel whose EMessage to lookup
+     * @param {Snowflake} guildId The guild that contains the channel
+     * @param {Snowflake} channelId The channel whose EMessage to lookup
      * @returns {EMessage} The `EMessage` associated with that guild and channel, or `undefined`
      */
     getEMessage(guildId, channelId) {
@@ -44,8 +47,8 @@ class ClientState {
 
     /**
      * Sets the `EMessage` associated with the guild and channel, and saves state
-     * @param {string} guildId The guild that contains the channel
-     * @param {string} channelId The channel whose EMessage to update
+     * @param {Snowflake} guildId The guild that contains the channel
+     * @param {Snowflake} channelId The channel whose EMessage to update
      * @param {EMessage} emessage The `EMessage` to associate with that guild and channel
      */
     setEMessage(guildId, channelId, emessage) {

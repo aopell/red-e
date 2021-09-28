@@ -24,5 +24,6 @@
         "USER_ID": "EMOJI_ID",
         "default": "👤"
     },
-    "defaultTimezone": "America/Los_Angeles"
+    "defaultTimezone": "America/Los_Angeles",
+    "expirationHours": 12
 }

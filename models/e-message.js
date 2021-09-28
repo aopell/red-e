@@ -1,14 +1,21 @@
 const { Embed } = require("@discordjs/builders");
-const ClientState = require("../state");
-const { nicknameOrUsername, getGuildMemberOrUser, discordTimestamp, getStatusMessage, getColorFromStatuses } = require("../util");
+const { MessageActionRow, MessageButton, MessageSelectMenu } = require("discord.js");
+const { nicknameOrUsername, getGuildMemberOrUser, discordTimestamp, getStatusMessage, getColorFromStatuses, AvailabilityLevel, EmojiKeys, formattedDateInTimezone, TimeUnit } = require("../util");
 const EStatus = require("./e-status");
+
+/**
+ * @typedef {import('../typedefs').Client} Client
+ * @typedef {import('discord.js').TextChannel} TextChannel
+ * @typedef {import('discord.js').Snowflake} Snowflake
+ * @typedef {import('../state')} ClientState
+ */
 
 class EMessage {
     /**
      * Creates a new `EMessage`
-     * @param {string} creatorId ID of the message creator
-     * @param {string} channelId ID of the channel where the message was created
-     * @param {string} guildId ID of the guild where the message was created
+     * @param {Snowflake} creatorId ID of the message creator
+     * @param {Snowflake} channelId ID of the channel where the message was created
+     * @param {Snowflake} guildId ID of the guild where the message was created
      * @param {EStatus} senderStatus Initial status for the message creator
      */
     constructor(creatorId, channelId, guildId, senderStatus) {
@@ -41,12 +48,13 @@ class EMessage {
     }
 
     get proposedTime() {
-        return this.getStatus(this.creatorId)?.creationTimestamp;
+        const creatorStatus = this.getStatus(this.creatorId);
+        return creatorStatus?.timeAvailable ?? creatorStatus?.creationTimestamp;
     }
 
     /**
      * Gets the most recent status of a given user
-     * @param {string} userId ID of the user to get status of
+     * @param {Snowflake} userId ID of the user to get status of
      * @returns {EStatus} the status of the requested user, or undefined
      */
     getStatus(userId) {
@@ -60,7 +68,7 @@ class EMessage {
     /**
      * Updates the status for the provided user with the given status
      * @param {ClientState} state The current client state
-     * @param {string} userId ID of the user whose status to update
+     * @param {Snowflake} userId ID of the user whose status to update
      * @param {EStatus} status the new status for that user
      * @returns {number} The index of the new status in the status log
      */
@@ -72,15 +80,37 @@ class EMessage {
         return newLength - 1;
     }
 
-    toMessage(client) {
-        const user = getGuildMemberOrUser(client, this.guildId, this.creatorId);
+    /**
+     * Updates all Discord messages associated with this EMessage
+     * @param {Client} client The bot client
+     */
+    async updateAllMessages(client) {
+        const messageObj = await this.toMessage(client);
+        /**
+         * @type {TextChannel}
+         */
+        const channel = await client.channels.fetch(this.channelId);
+        for (const messageId of this.messageIds) {
+            channel.messages.edit(messageId, messageObj).catch(err => {
+                console.warn(`Couldn't update message ${messageId}: ${err}`);
+            });
+        }
+    }
+
+    /**
+     * Gets a message object from this EMessage
+     * @param {Client} client The bot client
+     * @returns {object}
+     */
+    async toMessage(client) {
+        const user = await getGuildMemberOrUser(client, this.guildId, this.creatorId);
         const embed = new Embed()
             .setTitle("eeee?")
-            .setDescription(`${nicknameOrUsername(user)} proposes that we eeee${this.proposedTime ? " " + discordTimestamp(this.proposedTime, "R") : ""}`);
+            .setDescription(`${nicknameOrUsername(user)} propose${this.proposedTime && this.proposedTime >= Date.now() ? "s" : "d"} that we eeee${this.proposedTime ? " " + discordTimestamp(this.proposedTime, "R") : ""}`);
 
         const currentStatuses = [];
         for (const userId in this.statuses) {
-            const name = nicknameOrUsername(getGuildMemberOrUser(client, this.guildId, userId));
+            const name = nicknameOrUsername(await getGuildMemberOrUser(client, this.guildId, userId));
             const avatar = client.config?.avatoji?.[userId] ?? client.config?.avatoji?.default ?? "❓";
             const s = this.getStatus(userId);
             currentStatuses.push(s);
@@ -91,10 +121,82 @@ class EMessage {
         embed.setFooter({ text: "Last Updated" });
         embed.setTimestamp(Date.now());
 
-        return {
+        const buttonsRow = new MessageActionRow()
+            .addComponents(
+                new MessageButton()
+                    .setCustomId(AvailabilityLevel.AVAILABLE)
+                    .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.AVAILABLE])
+                    .setStyle("SUCCESS"),
+                new MessageButton()
+                    .setCustomId(EmojiKeys.AGREE)
+                    .setEmoji(client.config.availabilityEmojis[EmojiKeys.AGREE])
+                    .setStyle("PRIMARY"),
+                new MessageButton()
+                    .setCustomId(AvailabilityLevel.MAYBE)
+                    .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.MAYBE])
+                    .setStyle("SECONDARY"),
+                new MessageButton()
+                    .setCustomId(AvailabilityLevel.UNAVAILABLE)
+                    .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.UNAVAILABLE])
+                    .setStyle("DANGER"),
+            );
+
+        const timezoneName = formattedDateInTimezone(Date.now(), client.config.defaultTimezone, "z");
+
+        const selectRow = new MessageActionRow()
+            .addComponents(
+                new MessageSelectMenu()
+                    .setCustomId("AVAILABILITY_SELECT")
+                    .setPlaceholder("When will you be available?")
+                    .addOptions([
+                        {
+                            label: "5 minutes",
+                            emoji: client.config.availabilityEmojis[EmojiKeys.FIVE_MINUTES],
+                            value: EmojiKeys.FIVE_MINUTES,
+                        },
+                        {
+                            label: "15 minutes",
+                            emoji: client.config.availabilityEmojis[EmojiKeys.FIFTEEN_MINUTES],
+                            value: EmojiKeys.FIFTEEN_MINUTES,
+                        },
+                        {
+                            label: "1 hour",
+                            emoji: client.config.availabilityEmojis[EmojiKeys.ONE_HOUR],
+                            value: EmojiKeys.ONE_HOUR,
+                        },
+                        {
+                            label: "2 hours",
+                            emoji: client.config.availabilityEmojis[EmojiKeys.TWO_HOURS],
+                            value: EmojiKeys.TWO_HOURS,
+                        },
+                        {
+                            label: `10:00 PM ${timezoneName}`,
+                            emoji: client.config.availabilityEmojis[EmojiKeys.TEN_O_CLOCK],
+                            value: EmojiKeys.TEN_O_CLOCK,
+                        },
+                        {
+                            label: `11:00 PM ${timezoneName}`,
+                            emoji: client.config.availabilityEmojis[EmojiKeys.ELEVEN_O_CLOCK],
+                            value: EmojiKeys.ELEVEN_O_CLOCK,
+                        },
+                        {
+                            label: `12:00 AM ${timezoneName}`,
+                            emoji: client.config.availabilityEmojis[EmojiKeys.TWELVE_O_CLOCK],
+                            value: EmojiKeys.TWELVE_O_CLOCK,
+                        },
+                    ]),
+            );
+
+        const returnValue = {
             embeds: [embed],
-            // components: [buttonsRow, selectRow],
+            components: [buttonsRow, selectRow],
         };
+
+        if (this.creationTimestamp < Date.now() - ((client.config.expirationHours ?? 12) * TimeUnit.HOURS)) {
+            returnValue.components = undefined;
+        }
+
+        return returnValue;
     }
 }
 

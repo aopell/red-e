@@ -1,6 +1,10 @@
-const { GuildMember, User } = require("discord.js");
-const moment = require("moment");
-const EStatus = require("./models/e-status");
+const moment = require("moment-timezone");
+
+/**
+ * @typedef {import('discord.js').GuildMember} GuildMember
+ * @typedef {import('discord.js').User} User
+ * @typedef {import('./models/e-status')} EStatus
+ */
 
 const AvailabilityLevel = Object.freeze({
     UNKNOWN: "UNKNOWN",
@@ -35,7 +39,7 @@ const EmojiKeys = Object.freeze({
 
 /**
  * Gets the average color of all statuses
- * @param {object} config Bot config
+ * @param {import('./typedefs').Config} config Bot config
  * @param {EStatus[]} statuses List of statuses
  * @returns {number}
  */
@@ -113,10 +117,11 @@ function getStatusMessage(config, status) {
 
 /**
  * Gets the guild member or user object for the given guildId and userId
- * @returns {GuildMember|User}
+ * @returns {Promise<GuildMember|User>}
  */
-function getGuildMemberOrUser(client, guildId, userId) {
-    let user = client.guilds?.cache?.get(guildId)?.members?.cache?.get(userId);
+async function getGuildMemberOrUser(client, guildId, userId) {
+    const guild = await client.guilds.fetch(guildId);
+    let user = await guild.members.fetch(userId);
     if (!user) {
         user = client.users.fetch(userId);
     }
@@ -132,10 +137,23 @@ function nicknameOrUsername(user) {
     return user?.nickname ?? user?.user?.username ?? user?.username;
 }
 
+/**
+ * Converts a Unix timestamp to a moment object in a specified timezone
+ * @param {number} unixTimestamp Unix timestamp
+ * @param {string} timezone Unix timezone string
+ * @returns {moment.Moment}
+ */
 function dateInTimezone(unixTimestamp, timezone) {
     return moment(unixTimestamp).tz(timezone);
 }
 
+/**
+ * Formats a Unix timestamp as a string in a specified timezone
+ * @param {number} unixTimestamp Unix timestamp
+ * @param {string} timezone Unix timezone string
+ * @param {string} format String format to use
+ * @returns {string}
+ */
 function formattedDateInTimezone(unixTimestamp, timezone, format) {
     return dateInTimezone(unixTimestamp, timezone).format(format);
 }
@@ -160,11 +178,19 @@ const TimestampFlags = Object.freeze({
     RELATIVE: "R",
 });
 
+const TimeUnit = Object.freeze({
+    SECONDS: 1000,
+    MINUTES: 60 * 1000,
+    HOURS: 60 * 60 * 1000,
+    DAYS: 24 * 60 * 60 * 1000,
+});
+
 module.exports = {
     AvailabilityLevel,
     AvailabilityColors,
     EmojiKeys,
     TimestampFlags,
+    TimeUnit,
     getColorFromStatuses,
     getStatusMessage,
     getGuildMemberOrUser,

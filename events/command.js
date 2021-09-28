@@ -1,6 +1,16 @@
+/**
+ * @typedef {import('../typedefs').Client} Client
+ * @typedef {import('discord.js').CommandInteraction} Interaction
+ */
+
 module.exports = {
     name: "interactionCreate",
     once: false,
+    /**
+     * Handles a command interaction
+     * @param {Client} client The bot client
+     * @param {Interaction} interaction The interaction
+     */
     async execute(client, interaction) {
         if (!interaction.isCommand()) return;
 
@@ -10,7 +20,7 @@ module.exports = {
 
         try {
             console.log(`Beginning execution of command: ${interaction.commandName}`);
-            await command.execute(client, client.state, interaction);
+            await command.execute(client, interaction);
             console.log(`Completed execution of command: ${interaction.commandName}`);
         } catch (error) {
             console.error(error);
