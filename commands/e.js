@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const EMessage = require("../models/e-message");
 const EStatus = require("../models/e-status");
-const { AvailabilityLevel } = require("../util");
+const { AvailabilityLevel, EmojiKeys, TimeUnit, getNearestHourAfter, EmojiText } = require("../util");
 
 /**
  * @typedef {import('../typedefs').Client} Client
@@ -11,7 +11,40 @@ const { AvailabilityLevel } = require("../util");
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("e")
-        .setDescription("Shows the current E status"),
+        .setDescription("Creates or views an e status message")
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName("start")
+                .setDescription("Create a new e message with your provided availability")
+                .addStringOption(option =>
+                    option
+                        .setName("when")
+                        .setDescription("Your availability")
+                        .setRequired(true)
+                        .addChoices([
+                            ["now", AvailabilityLevel.AVAILABLE],
+                            ["in 5 minutes", EmojiKeys.FIVE_MINUTES],
+                            ["in 15 minutes", EmojiKeys.FIFTEEN_MINUTES],
+                            ["in 1 hour", EmojiKeys.ONE_HOUR],
+                            ["in 2 hours", EmojiKeys.TWO_HOURS],
+                            ["at 10:00 PM", EmojiKeys.TEN_O_CLOCK],
+                            ["at 11:00 PM", EmojiKeys.ELEVEN_O_CLOCK],
+                            ["at midnight", EmojiKeys.TWELVE_O_CLOCK],
+                            ["at some point", AvailabilityLevel.UNKNOWN],
+                        ]),
+                ),
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName("show")
+                .setDescription("Shows the current EMessage if one exists"),
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName("delete")
+                .setDescription("Delete the current EMessage if one exists"),
+        ),
+
 
     /**
      * Executes the command
@@ -19,17 +52,87 @@ module.exports = {
      * @param {CommandInteraction} interaction The interaction object
      */
     async execute(client, interaction) {
-        const { channelId, guildId, user } = interaction;
-        let emessage = client.state.getEMessage(guildId, channelId);
-        if (!emessage) {
-            emessage = new EMessage(user.id, channelId, guildId, new EStatus(AvailabilityLevel.UNKNOWN));
-            client.state.setEMessage(guildId, channelId, emessage);
-        }
+        const subcommands = {
+            show: handleShow,
+            start: handleStart,
+            delete: handleDelete,
+        };
 
-        const message = await interaction.reply({ ...(await emessage.toMessage(client)), ephemeral: false, fetchReply: true });
-        if (message) {
-            emessage.messageIds.push(message.id);
-            client.state.setEMessage(guildId, channelId, emessage);
-        }
+        await subcommands[interaction.options.getSubcommand()](client, interaction);
     },
 };
+
+/**
+ * Executes the "show" subcommand
+ * @param {Client} client The current client
+ * @param {CommandInteraction} interaction The interaction object
+ */
+async function handleShow(client, interaction) {
+    const { channelId, guildId } = interaction;
+    const emessage = client.state.getEMessage(guildId, channelId);
+    if (!emessage) {
+        interaction.reply({ content: `${EmojiText.X_MARK} There is no e message in this channel`, ephemeral: true });
+        return;
+    }
+
+    const message = await interaction.reply({ ...(await emessage.toMessage(client)), ephemeral: false, fetchReply: true });
+    if (message) {
+        emessage.messageIds.push(message.id);
+        client.state.setEMessage(guildId, channelId, emessage);
+    }
+}
+
+/**
+ * Executes the "start" subcommand
+ * @param {Client} client The current client
+ * @param {CommandInteraction} interaction The interaction object
+ */
+async function handleStart(client, interaction) {
+    const { channelId, guildId, user, options } = interaction;
+
+    let emessage = client.state.getEMessage(guildId, channelId);
+    if (emessage) {
+        interaction.reply({ content: `${EmojiText.X_MARK} There is already an e message in this channel. Replacing e messages is not yet supported.`, ephemeral: true });
+        return;
+    }
+
+    const estatuses = {
+        [AvailabilityLevel.AVAILABLE]: new EStatus(AvailabilityLevel.AVAILABLE),
+        [EmojiKeys.FIVE_MINUTES]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, Date.now() + (5 * TimeUnit.MINUTES)),
+        [EmojiKeys.FIFTEEN_MINUTES]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, Date.now() + (15 * TimeUnit.MINUTES)),
+        [EmojiKeys.ONE_HOUR]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, Date.now() + (1 * TimeUnit.HOURS)),
+        [EmojiKeys.TWO_HOURS]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, Date.now() + (2 * TimeUnit.HOURS)),
+        [EmojiKeys.TEN_O_CLOCK]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(22, client.config.defaultTimezone)),
+        [EmojiKeys.ELEVEN_O_CLOCK]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(23, client.config.defaultTimezone)),
+        [EmojiKeys.TWELVE_O_CLOCK]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(0, client.config.defaultTimezone)),
+        [AvailabilityLevel.UNKNOWN]: new EStatus(AvailabilityLevel.UNKNOWN),
+    };
+
+    emessage = new EMessage(user.id, channelId, guildId, estatuses[options.get("when").value]);
+    client.state.setEMessage(guildId, channelId, emessage);
+
+    const message = await interaction.reply({ ...(await emessage.toMessage(client)), ephemeral: false, fetchReply: true });
+    if (message) {
+        emessage.messageIds.push(message.id);
+        client.state.setEMessage(guildId, channelId, emessage);
+    }
+}
+
+/**
+ * Executes the "show" subcommand
+ * @param {Client} client The current client
+ * @param {CommandInteraction} interaction The interaction object
+ */
+async function handleDelete(client, interaction) {
+    const { channelId, guildId } = interaction;
+    const emessage = client.state.getEMessage(guildId, channelId);
+    if (!emessage) {
+        interaction.reply({ content: `${EmojiText.X_MARK} There is no e message in this channel`, ephemeral: true });
+        return;
+    }
+
+    // TODO: log the message
+    emessage.updateAllMessages(client, true);
+    client.state.setEMessage(guildId, channelId, undefined);
+    interaction.reply({ content: `${EmojiText.CHECK_TICK} Successfully deleted e message`, ephemeral: true });
+}

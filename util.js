@@ -168,6 +168,22 @@ function discordTimestamp(unixTimestamp, formatFlag) {
     return `<t:${Math.floor(unixTimestamp / 1000)}:${formatFlag}>`;
 }
 
+/**
+ * Finds the nearest `hour` o'clock after the current time in the given timezone.
+ * @param {number} hour hour to find, between 0 and 23 inclusive
+ * @param {string} timezone Unix timezone in which to find the hour
+ * @returns {number} Unix timestamp of nearest `hour` o'clock after the current time
+ */
+function getNearestHourAfter(hour, timezone) {
+    const hourTime = moment.tz(`${hour}:00`, [moment.ISO_8601, "HH:mm"], timezone).valueOf();
+    if (hourTime > Date.now() + (24 * TimeUnit.HOURS)) {
+        return hourTime - (24 * TimeUnit.HOURS);
+    } else if (hourTime < Date.now()) {
+        return hourTime + (24 * TimeUnit.HOURS);
+    }
+    return hourTime;
+}
+
 const TimestampFlags = Object.freeze({
     SHORT_TIME: "t",
     LONG_TIME: "T",
@@ -185,12 +201,18 @@ const TimeUnit = Object.freeze({
     DAYS: 24 * 60 * 60 * 1000,
 });
 
+const EmojiText = Object.freeze({
+    CHECK_TICK: "<a:check_tick:747247710373019738>",
+    X_MARK: ":x:",
+});
+
 module.exports = {
     AvailabilityLevel,
     AvailabilityColors,
     EmojiKeys,
     TimestampFlags,
     TimeUnit,
+    EmojiText,
     getColorFromStatuses,
     getStatusMessage,
     getGuildMemberOrUser,
@@ -198,4 +220,5 @@ module.exports = {
     dateInTimezone,
     formattedDateInTimezone,
     discordTimestamp,
+    getNearestHourAfter,
 };

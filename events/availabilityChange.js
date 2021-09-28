@@ -3,9 +3,8 @@
  * @typedef {import('discord.js').ButtonInteraction | import('discord.js').SelectMenuInteraction} Interaction
  */
 
-const moment = require("moment-timezone");
 const EStatus = require("../models/e-status");
-const { AvailabilityLevel, EmojiKeys, TimeUnit } = require("../util");
+const { AvailabilityLevel, EmojiKeys, TimeUnit, getNearestHourAfter } = require("../util");
 
 module.exports = {
     name: "interactionCreate",
@@ -20,25 +19,15 @@ module.exports = {
 
         const userId = interaction.member.id;
         const emessage = client.state.getEMessage(interaction.guildId, interaction.channelId);
+
+        if (!emessage) {
+            interaction.reply({ content: ":x: There is no e message in this channel", ephemeral: true });
+            return;
+        }
+
         const currentStatus = emessage.getStatus(userId);
         const creatorStatus = emessage.getStatus(emessage.creatorId);
         const currentTimeAvailable = currentStatus?.timeAvailable ?? Date.now();
-
-        /**
-         * Finds the nearest `hour` o'clock after the current time in the given timezone.
-         * @param {number} hour hour to find, between 0 and 23 inclusive
-         * @param {*} timezone Unix timezone in which to find the hour
-         * @returns {number} Unix timestamp of nearest `hour` o'clock after the current time
-         */
-        function getNearestHourAfter(hour, timezone) {
-            const hourTime = moment.tz(`${hour}:00`, [moment.ISO_8601, "HH:mm"], timezone).valueOf();
-            if (hourTime > Date.now() + (24 * TimeUnit.HOURS)) {
-                return hourTime - (24 * TimeUnit.HOURS);
-            } else if (hourTime < Date.now()) {
-                return hourTime + (24 * TimeUnit.HOURS);
-            }
-            return hourTime;
-        }
 
         switch (interaction.customId) {
             case AvailabilityLevel.AVAILABLE:

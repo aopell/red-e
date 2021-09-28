@@ -83,9 +83,10 @@ class EMessage {
     /**
      * Updates all Discord messages associated with this EMessage
      * @param {Client} client The bot client
+     * @param {boolean} [removeControls] Whether to remove controls from the messages
      */
-    async updateAllMessages(client) {
-        const messageObj = await this.toMessage(client);
+    async updateAllMessages(client, removeControls = false) {
+        const messageObj = await this.toMessage(client, removeControls);
         /**
          * @type {TextChannel}
          */
@@ -100,9 +101,10 @@ class EMessage {
     /**
      * Gets a message object from this EMessage
      * @param {Client} client The bot client
+     * @param {boolean} [removeControls] Whether to remove controls from this message
      * @returns {object}
      */
-    async toMessage(client) {
+    async toMessage(client, removeControls = false) {
         const user = await getGuildMemberOrUser(client, this.guildId, this.creatorId);
         const embed = new Embed()
             .setTitle("eeee?")
@@ -192,8 +194,8 @@ class EMessage {
             components: [buttonsRow, addTimeButtonsRow, selectRow],
         };
 
-        if (this.creationTimestamp < Date.now() - ((client.config.expirationHours ?? 12) * TimeUnit.HOURS)) {
-            returnValue.components = undefined;
+        if (removeControls || this.creationTimestamp < Date.now() - ((client.config.expirationHours ?? 12) * TimeUnit.HOURS)) {
+            returnValue.components = [];
         }
 
         return returnValue;

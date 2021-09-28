@@ -3,6 +3,9 @@
  * @typedef {import('discord.js').VoiceState} VoiceState
  */
 
+const EStatus = require('../models/e-status');
+const { AvailabilityLevel } = require('../util');
+
 module.exports = {
     name: "voiceStateUpdate",
     once: false,
@@ -13,8 +16,30 @@ module.exports = {
      * @param {VoiceState} newState New voice state
      */
     async execute(client, oldState, newState) {
-        console.log("Voice state changed");
-        console.log(JSON.stringify(oldState));
-        console.log(JSON.stringify(newState));
+        const guildId = oldState.guild.id;
+        const userId = oldState.id;
+        const prevChannel = oldState.channelId;
+        const newChannel = newState.channelId;
+        const trackedChannels = client.state.getGuildPreference(guildId, "voiceChannels", []);
+        const prevTracked = trackedChannels.includes(prevChannel);
+        const newTracked = trackedChannels.includes(newChannel);
+        const guildEMessages = client.state.getAllGuildEMessages(guildId);
+
+        if (prevTracked && newTracked) {
+            // switching channels
+            // do nothing
+        } else if (newTracked) {
+            // joining channel
+            for (const emessage of guildEMessages) {
+                emessage.updateStatus(client.state, userId, new EStatus(AvailabilityLevel.READY));
+                emessage.updateAllMessages(client);
+            }
+        } else if (prevTracked) {
+            // leaving channel
+            for (const emessage of guildEMessages) {
+                emessage.updateStatus(client.state, userId, new EStatus(AvailabilityLevel.DONE));
+                emessage.updateAllMessages(client);
+            }
+        }
     },
 };
