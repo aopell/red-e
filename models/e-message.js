@@ -196,6 +196,7 @@ class EMessage {
 
         if (removeControls || this.creationTimestamp < Date.now() - ((client.config.expirationHours ?? 12) * TimeUnit.HOURS)) {
             returnValue.components = [];
+            embed.setFooter({ text: "This messsage was archived" });
         }
 
         return returnValue;

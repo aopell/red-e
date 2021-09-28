@@ -20,6 +20,10 @@ class GuildPreferences {
          * @type {string}
          */
         this.defaultTimezone = "America/Los_Angeles";
+        /**
+         * @type {Snowflake}
+         */
+        this.availabilityRole = null;
     }
 
     /**
