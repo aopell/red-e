@@ -141,34 +141,34 @@ class EMessage {
                     .setStyle("DANGER"),
             );
 
+        const addTimeButtonsRow = new MessageActionRow()
+            .addComponents(
+                new MessageButton()
+                    .setCustomId(EmojiKeys.FIVE_MINUTES)
+                    .setEmoji(client.config.availabilityEmojis[EmojiKeys.FIVE_MINUTES])
+                    .setStyle("SECONDARY"),
+                new MessageButton()
+                    .setCustomId(EmojiKeys.FIFTEEN_MINUTES)
+                    .setEmoji(client.config.availabilityEmojis[EmojiKeys.FIFTEEN_MINUTES])
+                    .setStyle("SECONDARY"),
+                new MessageButton()
+                    .setCustomId(EmojiKeys.ONE_HOUR)
+                    .setEmoji(client.config.availabilityEmojis[EmojiKeys.ONE_HOUR])
+                    .setStyle("SECONDARY"),
+                new MessageButton()
+                    .setCustomId(EmojiKeys.TWO_HOURS)
+                    .setEmoji(client.config.availabilityEmojis[EmojiKeys.TWO_HOURS])
+                    .setStyle("SECONDARY"),
+            );
+
         const timezoneName = formattedDateInTimezone(Date.now(), client.config.defaultTimezone, "z");
 
         const selectRow = new MessageActionRow()
             .addComponents(
                 new MessageSelectMenu()
                     .setCustomId("AVAILABILITY_SELECT")
-                    .setPlaceholder("When will you be available?")
+                    .setPlaceholder("What time will you be available?")
                     .addOptions([
-                        {
-                            label: "5 minutes",
-                            emoji: client.config.availabilityEmojis[EmojiKeys.FIVE_MINUTES],
-                            value: EmojiKeys.FIVE_MINUTES,
-                        },
-                        {
-                            label: "15 minutes",
-                            emoji: client.config.availabilityEmojis[EmojiKeys.FIFTEEN_MINUTES],
-                            value: EmojiKeys.FIFTEEN_MINUTES,
-                        },
-                        {
-                            label: "1 hour",
-                            emoji: client.config.availabilityEmojis[EmojiKeys.ONE_HOUR],
-                            value: EmojiKeys.ONE_HOUR,
-                        },
-                        {
-                            label: "2 hours",
-                            emoji: client.config.availabilityEmojis[EmojiKeys.TWO_HOURS],
-                            value: EmojiKeys.TWO_HOURS,
-                        },
                         {
                             label: `10:00 PM ${timezoneName}`,
                             emoji: client.config.availabilityEmojis[EmojiKeys.TEN_O_CLOCK],
@@ -189,7 +189,7 @@ class EMessage {
 
         const returnValue = {
             embeds: [embed],
-            components: [buttonsRow, selectRow],
+            components: [buttonsRow, addTimeButtonsRow, selectRow],
         };
 
         if (this.creationTimestamp < Date.now() - ((client.config.expirationHours ?? 12) * TimeUnit.HOURS)) {

@@ -57,20 +57,20 @@ module.exports = {
             case AvailabilityLevel.UNAVAILABLE:
                 emessage.updateStatus(client.state, userId, new EStatus(AvailabilityLevel.UNAVAILABLE));
                 break;
+            case EmojiKeys.FIVE_MINUTES:
+                emessage.updateStatus(client.state, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (5 * TimeUnit.MINUTES)));
+                break;
+            case EmojiKeys.FIFTEEN_MINUTES:
+                emessage.updateStatus(client.state, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (15 * TimeUnit.MINUTES)));
+                break;
+            case EmojiKeys.ONE_HOUR:
+                emessage.updateStatus(client.state, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (1 * TimeUnit.HOURS)));
+                break;
+            case EmojiKeys.TWO_HOURS:
+                emessage.updateStatus(client.state, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (2 * TimeUnit.HOURS)));
+                break;
             case "AVAILABILITY_SELECT":
                 switch (interaction.values[0]) {
-                    case EmojiKeys.FIVE_MINUTES:
-                        emessage.updateStatus(client.state, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (5 * TimeUnit.MINUTES)));
-                        break;
-                    case EmojiKeys.FIFTEEN_MINUTES:
-                        emessage.updateStatus(client.state, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (15 * TimeUnit.MINUTES)));
-                        break;
-                    case EmojiKeys.ONE_HOUR:
-                        emessage.updateStatus(client.state, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (1 * TimeUnit.HOURS)));
-                        break;
-                    case EmojiKeys.TWO_HOURS:
-                        emessage.updateStatus(client.state, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (2 * TimeUnit.HOURS)));
-                        break;
                     case EmojiKeys.TEN_O_CLOCK:
                         emessage.updateStatus(client.state, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(22, client.config.defaultTimezone)));
                         break;

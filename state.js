@@ -56,6 +56,20 @@ class ClientState {
         this.EMessages[guildId][channelId] = emessage;
         this.save();
     }
+
+    /**
+     * Gets all `EMessage`s
+     * @returns {EMessage[]}
+     */
+    getAllEMessages() {
+        const emessages = [];
+        for (const guildId in (this.EMessages ?? [])) {
+            for (const channelId in (this.EMessages?.[guildId] ?? [])) {
+                emessages.push(this.getEMessage(guildId, channelId));
+            }
+        }
+        return emessages;
+    }
 }
 
 module.exports = ClientState;
