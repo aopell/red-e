@@ -1,3 +1,0 @@
-- @eeeeeeee role
-- reminder pings
-- logging all past messages

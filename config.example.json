@@ -25,5 +25,18 @@
         "default": "👤"
     },
     "defaultTimezone": "America/Los_Angeles",
-    "expirationHours": 12
+    "expirationHours": 12,
+    "latePings": [
+        5,
+        15
+    ],
+    "lateMessages": [
+        "{@}, liar.",
+        "{@}, we're waiting",
+        "{@}, take your time, it's okay",
+        "{@}, could you be any slower?",
+        "{@}, what's taking you so long?",
+        "{@}, hurry up!",
+        "{@}, get in here!"
+    ]
 }

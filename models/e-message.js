@@ -1,5 +1,5 @@
 const { Embed } = require("@discordjs/builders");
-const { MessageActionRow, MessageButton, MessageSelectMenu } = require("discord.js");
+const { MessageActionRow, MessageButton, MessageSelectMenu, Role } = require("discord.js");
 const { nicknameOrUsername, getGuildMemberOrUser, discordTimestamp, getStatusMessage, getColorFromStatuses, AvailabilityLevel, EmojiKeys, formattedDateInTimezone, TimeUnit } = require("../util");
 const EStatus = require("./e-status");
 
@@ -67,17 +67,96 @@ class EMessage {
 
     /**
      * Updates the status for the provided user with the given status
-     * @param {ClientState} state The current client state
+     * @param {Client} client The bot client
      * @param {Snowflake} userId ID of the user whose status to update
      * @param {EStatus} status the new status for that user
-     * @returns {number} The index of the new status in the status log
+     * @param {boolean} updateRoles whether or not to update the availability role's members
+     * @returns {EStatus} The value of the `status` argument
      */
-    updateStatus(state, userId, status) {
+    updateStatus(client, userId, status, updateRoles = true) {
         const newLength = this.statusLog.push(status);
         this.statuses[userId] = newLength - 1;
         this.lastUpdated = Date.now();
-        state.setEMessage(this.guildId, this.channelId, this);
-        return newLength - 1;
+        client.state.setEMessage(this.guildId, this.channelId, this);
+        if (updateRoles) this.updateAvailabilityRole(client);
+        return status;
+    }
+
+    /**
+     * Updates the guild's availability role, if it exists
+     * @param {Client} client The bot client
+     */
+    async updateAvailabilityRole(client) {
+        const roleId = client.state.getGuildPreference(this.guildId, "availabilityRole", null);
+        if (!roleId) {
+            return;
+        }
+        const guild = await client.guilds.fetch(this.guildId);
+        const role = await guild.roles.fetch(roleId);
+
+        const memberIds = (await guild.members.list({ limit: 500 })).map(u => u.id);
+
+        const availableRoles = [AvailabilityLevel.AVAILABLE, AvailabilityLevel.AVAILABLE_LATER, AvailabilityLevel.MAYBE, AvailabilityLevel.READY, AvailabilityLevel.DONE];
+
+        for (const userId of memberIds) {
+            const status = this.getStatus(userId);
+            const member = await guild.members.fetch(userId);
+            if (status && availableRoles.includes(status.availability)) {
+                member.roles.add(role);
+            } else {
+                member.roles.remove(role);
+            }
+        }
+    }
+
+    /**
+     * Pings any late users
+     * @param {Client} client The bot client
+     */
+    async pingLateUsers(client) {
+        for (const userId in this.statuses) {
+            const status = this.getStatus(userId);
+            if (
+                status.availability == AvailabilityLevel.AVAILABLE_LATER
+                && status.reminderCount < client.config.latePings.length
+                && status.timeAvailable + (client.config.latePings[status.reminderCount] * TimeUnit.MINUTES) < Date.now()
+            ) {
+                status.reminderCount += 1;
+                /**
+                 * @type {TextChannel}
+                 */
+                const channel = await client.channels.fetch(this.channelId);
+                const msg = client.config.lateMessages[Math.floor(Math.random() * client.config.lateMessages.length)];
+
+                const buttonsRow = new MessageActionRow()
+                    .addComponents(
+                        new MessageButton()
+                            .setCustomId(`|REMINDER|${userId}|${AvailabilityLevel.AVAILABLE}`)
+                            .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.AVAILABLE])
+                            .setStyle("SUCCESS"),
+                        new MessageButton()
+                            .setCustomId(`|REMINDER|${userId}|${AvailabilityLevel.MAYBE}`)
+                            .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.MAYBE])
+                            .setStyle("SECONDARY"),
+                        new MessageButton()
+                            .setCustomId(`|REMINDER|${userId}|${AvailabilityLevel.UNAVAILABLE}`)
+                            .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.UNAVAILABLE])
+                            .setStyle("DANGER"),
+                        new MessageButton()
+                            .setCustomId(`|REMINDER|${userId}|${EmojiKeys.FIVE_MINUTES}`)
+                            .setEmoji(client.config.availabilityEmojis[EmojiKeys.FIVE_MINUTES])
+                            .setStyle("SECONDARY"),
+                        new MessageButton()
+                            .setCustomId(`|REMINDER|${userId}|${EmojiKeys.FIFTEEN_MINUTES}`)
+                            .setEmoji(client.config.availabilityEmojis[EmojiKeys.FIFTEEN_MINUTES])
+                            .setStyle("SECONDARY"),
+                    );
+
+                channel.send({ content: msg.replace("{@}", `<@${userId}>`), components: [buttonsRow] });
+            }
+        }
+
+        client.state.setEMessage(this.guildId, this.channelId, this);
     }
 
     /**
@@ -163,7 +242,7 @@ class EMessage {
                     .setStyle("SECONDARY"),
             );
 
-        const timezoneName = formattedDateInTimezone(Date.now(), client.config.defaultTimezone, "z");
+        const timezoneName = formattedDateInTimezone(Date.now(), client.state.getGuildPreference(this.guildId, "defaultTimezone", client.config.defaultTimezone), "z");
 
         const selectRow = new MessageActionRow()
             .addComponents(

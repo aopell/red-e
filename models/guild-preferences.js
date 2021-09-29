@@ -1,3 +1,5 @@
+const config = require("../config.json");
+
 /**
  * @typedef {import('discord.js').Snowflake} Snowflake
  */
@@ -19,7 +21,7 @@ class GuildPreferences {
         /**
          * @type {string}
          */
-        this.defaultTimezone = "America/Los_Angeles";
+        this.defaultTimezone = config.defaultTimezone;
         /**
          * @type {Snowflake}
          */

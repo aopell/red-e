@@ -14,6 +14,8 @@
  * @property {Map<Snowflake|"default", EmojiResolvable>} avatoji Avatoji® - avatar emojis for user IDs
  * @property {string} defaultTimezone The default UNIX timezone to use
  * @property {number} expirationHours EMessages will expire this many hours after creation
+ * @property {number[]} latePings Users will be pinged after being late for these numbers of minutes. Must be specified in increasing order.
+ * @property {string[]} lateMessages Messages to send to users when they are running later. {@} is replaced by a ping for the late user.
  */
 
 /**

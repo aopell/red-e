@@ -92,9 +92,11 @@ async function handleStart(client, interaction) {
 
     let emessage = client.state.getEMessage(guildId, channelId);
     if (emessage) {
-        interaction.reply({ content: `${EmojiText.X_MARK} There is already an e message in this channel. Replacing e messages is not yet supported.`, ephemeral: true });
+        interaction.reply({ content: `${EmojiText.X_MARK} There is already an e message in this channel.`, ephemeral: true });
         return;
     }
+
+    const tz = client.state.getGuildPreference(interaction.guildId, "defaultTimezone", client.config.defaultTimezone);
 
     const estatuses = {
         [AvailabilityLevel.AVAILABLE]: new EStatus(AvailabilityLevel.AVAILABLE),
@@ -102,9 +104,9 @@ async function handleStart(client, interaction) {
         [EmojiKeys.FIFTEEN_MINUTES]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, Date.now() + (15 * TimeUnit.MINUTES)),
         [EmojiKeys.ONE_HOUR]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, Date.now() + (1 * TimeUnit.HOURS)),
         [EmojiKeys.TWO_HOURS]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, Date.now() + (2 * TimeUnit.HOURS)),
-        [EmojiKeys.TEN_O_CLOCK]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(22, client.config.defaultTimezone)),
-        [EmojiKeys.ELEVEN_O_CLOCK]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(23, client.config.defaultTimezone)),
-        [EmojiKeys.TWELVE_O_CLOCK]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(0, client.config.defaultTimezone)),
+        [EmojiKeys.TEN_O_CLOCK]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(22, tz)),
+        [EmojiKeys.ELEVEN_O_CLOCK]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(23, tz)),
+        [EmojiKeys.TWELVE_O_CLOCK]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(0, tz)),
         [AvailabilityLevel.UNKNOWN]: new EStatus(AvailabilityLevel.UNKNOWN),
     };
 

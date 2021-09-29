@@ -38,7 +38,7 @@ class ClientState {
     }
 
     save() {
-        const json = JSON.stringify(this);
+        const json = JSON.stringify(this, null, 4);
         fs.writeFileSync("state.json", json);
     }
 
@@ -61,6 +61,13 @@ class ClientState {
      */
     setEMessage(guildId, channelId, emessage) {
         this.EMessages[guildId] = this.EMessages[guildId] ?? {};
+
+        const existing = this.EMessages[guildId][channelId];
+        if (!emessage && existing) {
+            fs.mkdirSync(`logs/messages/${guildId}/${channelId}`, { recursive: true });
+            fs.writeFileSync(`logs/messages/${guildId}/${channelId}/${existing.creationTimestamp}.json`, JSON.stringify(existing));
+        }
+
         this.EMessages[guildId][channelId] = emessage;
         this.save();
     }

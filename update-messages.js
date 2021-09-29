@@ -12,6 +12,7 @@ const { TimeUnit } = require("./util");
 async function updateMessages(client) {
     for (const emessage of client.state.getAllEMessages()) {
         emessage.updateAllMessages(client);
+        emessage.pingLateUsers(client);
 
         if (emessage.creationTimestamp < Date.now() - ((client.config.expirationHours ?? 12) * TimeUnit.HOURS)) {
             client.state.setEMessage(emessage.guildId, emessage.channelId, undefined);

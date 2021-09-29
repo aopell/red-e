@@ -3,7 +3,7 @@ const { Client, Collection, Intents } = require("discord.js");
 const config = require("./config.json");
 const ClientState = require("./state");
 
-const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_VOICE_STATES] });
+const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_VOICE_STATES, Intents.FLAGS.GUILD_MEMBERS] });
 
 client.config = config;
 client.state = ClientState.load();

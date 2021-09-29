@@ -31,13 +31,13 @@ module.exports = {
         } else if (newTracked) {
             // joining channel
             for (const emessage of guildEMessages) {
-                emessage.updateStatus(client.state, userId, new EStatus(AvailabilityLevel.READY));
+                emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.READY), false);
                 emessage.updateAllMessages(client);
             }
         } else if (prevTracked) {
             // leaving channel
             for (const emessage of guildEMessages) {
-                emessage.updateStatus(client.state, userId, new EStatus(AvailabilityLevel.DONE));
+                emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.DONE), false);
                 emessage.updateAllMessages(client);
             }
         }
