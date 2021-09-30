@@ -7,7 +7,7 @@ class EStatus {
     constructor(availability, timeAvailable = undefined) {
         this.availability = availability;
         this.timeAvailable = timeAvailable;
-        this.reminderCount = 0;
+        this.reminderCount = timeAvailable ? 0 : undefined;
         this.creationTimestamp = Date.now();
     }
 
