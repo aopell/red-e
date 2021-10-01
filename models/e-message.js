@@ -242,35 +242,26 @@ class EMessage {
                     .setStyle("SECONDARY"),
             );
 
-        const timezoneName = formattedDateInTimezone(Date.now(), client.state.getGuildPreference(this.guildId, "defaultTimezone", client.config.defaultTimezone), "z");
-
-        const selectRow = new MessageActionRow()
+        const hourButtons = new MessageActionRow()
             .addComponents(
-                new MessageSelectMenu()
-                    .setCustomId("AVAILABILITY_SELECT")
-                    .setPlaceholder("What time will you be available?")
-                    .addOptions([
-                        {
-                            label: `10:00 PM ${timezoneName}`,
-                            emoji: client.config.availabilityEmojis[EmojiKeys.TEN_O_CLOCK],
-                            value: EmojiKeys.TEN_O_CLOCK,
-                        },
-                        {
-                            label: `11:00 PM ${timezoneName}`,
-                            emoji: client.config.availabilityEmojis[EmojiKeys.ELEVEN_O_CLOCK],
-                            value: EmojiKeys.ELEVEN_O_CLOCK,
-                        },
-                        {
-                            label: `12:00 AM ${timezoneName}`,
-                            emoji: client.config.availabilityEmojis[EmojiKeys.TWELVE_O_CLOCK],
-                            value: EmojiKeys.TWELVE_O_CLOCK,
-                        },
-                    ]),
+                new MessageButton()
+                    .setCustomId(EmojiKeys.TEN_O_CLOCK)
+                    .setEmoji(client.config.availabilityEmojis[EmojiKeys.TEN_O_CLOCK])
+                    .setStyle("SECONDARY"),
+                new MessageButton()
+                    .setCustomId(EmojiKeys.ELEVEN_O_CLOCK)
+                    .setEmoji(client.config.availabilityEmojis[EmojiKeys.ELEVEN_O_CLOCK])
+                    .setStyle("SECONDARY"),
+                new MessageButton()
+                    .setCustomId(EmojiKeys.TWELVE_O_CLOCK)
+                    .setEmoji(client.config.availabilityEmojis[EmojiKeys.TWELVE_O_CLOCK])
+                    .setStyle("SECONDARY"),
             );
+
 
         const returnValue = {
             embeds: [embed],
-            components: [buttonsRow, addTimeButtonsRow, selectRow],
+            components: [buttonsRow, addTimeButtonsRow, hourButtons],
         };
 
         if (removeControls || this.creationTimestamp < Date.now() - ((client.config.expirationHours ?? 12) * TimeUnit.HOURS)) {

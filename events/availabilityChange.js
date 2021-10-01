@@ -60,18 +60,14 @@ module.exports = {
             case EmojiKeys.TWO_HOURS:
                 emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (2 * TimeUnit.HOURS)));
                 break;
-            case "AVAILABILITY_SELECT":
-                switch (interaction.values[0]) {
-                    case EmojiKeys.TEN_O_CLOCK:
-                        emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(22, tz)));
-                        break;
-                    case EmojiKeys.ELEVEN_O_CLOCK:
-                        emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(23, tz)));
-                        break;
-                    case EmojiKeys.TWELVE_O_CLOCK:
-                        emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(0, tz)));
-                        break;
-                }
+            case EmojiKeys.TEN_O_CLOCK:
+                emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(22, tz)));
+                break;
+            case EmojiKeys.ELEVEN_O_CLOCK:
+                emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(23, tz)));
+                break;
+            case EmojiKeys.TWELVE_O_CLOCK:
+                emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(0, tz)));
                 break;
             default:
                 interaction.reply({ content: "Welp... you done clicked a button. But we don't know what it do!", ephemeral: true });

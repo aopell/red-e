@@ -3,8 +3,8 @@
  * @typedef {import('discord.js').VoiceState} VoiceState
  */
 
-const EStatus = require('../models/e-status');
-const { AvailabilityLevel } = require('../util');
+const EStatus = require("../models/e-status");
+const { AvailabilityLevel } = require("../util");
 
 module.exports = {
     name: "voiceStateUpdate",
