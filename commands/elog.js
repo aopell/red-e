@@ -27,6 +27,17 @@ module.exports = {
         )
         .addSubcommand(subcommand =>
             subcommand
+                .setName("view")
+                .setDescription("View the specified log")
+                .addStringOption(option =>
+                    option
+                        .setName("file")
+                        .setDescription("The log file to display as a chart")
+                        .setRequired(true),
+                ),
+        )
+        .addSubcommand(subcommand =>
+            subcommand
                 .setName("chart")
                 .setDescription("Shows a chart for the specified log")
                 .addStringOption(option =>
@@ -46,6 +57,7 @@ module.exports = {
     async execute(client, interaction) {
         const subcommands = {
             list: handleList,
+            view: handleView,
             chart: handleChart,
         };
 
@@ -90,6 +102,28 @@ async function handleList(client, interaction) {
         console.log(err);
         interaction.reply({ content: `${EmojiText.X_MARK} Unable to find any logs for this channel`, ephemeral: true });
     }
+}
+
+/**
+ * Executes the "list" subcommand
+ * @param {Client} client The current client
+ * @param {CommandInteraction} interaction The interaction object
+ */
+async function handleView(client, interaction) {
+    const { channelId, guildId } = interaction;
+    const filename = interaction.options.getString("file");
+    const tz = client.state.getGuildPreference(interaction.guildId, "defaultTimezone", client.config.defaultTimezone);
+    if (filename.includes("/")) {
+        interaction.reply({ content: `${EmojiText.X_MARK} File name cannot contain \`/\`.`, ephemeral: true });
+        return;
+    } else if (!fs.existsSync(`logs/messages/${guildId}/${channelId}/${filename}`)) {
+        interaction.reply({ content: `${EmojiText.X_MARK} That file does not exist.`, ephemeral: true });
+        return;
+    }
+
+    const json = JSON.parse(fs.readFileSync(`logs/messages/${guildId}/${channelId}/${filename}`));
+
+    interaction.reply({ files: [Buffer.from(JSON.stringify(json, null, 4))], ephemeral: true });
 }
 
 /**
