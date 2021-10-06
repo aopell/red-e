@@ -169,6 +169,7 @@ async function handleChart(client, interaction) {
             scales: {
                 x: {
                     type: "time",
+                    distribution: "linear",
                 },
                 // y: {
                 //     beginAtZero: true,
