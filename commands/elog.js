@@ -196,6 +196,7 @@ async function handleChart(client, interaction) {
                 label: nicks[uid],
                 data: chartValues[uid],
                 borderColor: "#" + Math.floor(Math.random() * (1 << 3 * 8)).toString(16).padStart(6, "0"),
+                fill: false,
             })),
         },
         options: {
