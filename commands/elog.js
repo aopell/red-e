@@ -197,10 +197,10 @@ async function handleChart(client, interaction) {
                 data: chartValues[uid],
                 borderColor: "#" + Math.floor(Math.random() * (1 << 3 * 8)).toString(16).padStart(6, "0"),
                 fill: false,
+                lineTension: 0,
             })),
         },
         options: {
-            lineTension: 0,
             scales: {
                 xAxes: [{
                     type: "time",
