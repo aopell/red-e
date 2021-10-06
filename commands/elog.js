@@ -162,6 +162,7 @@ async function handleChart(client, interaction) {
             datasets: userIds.map(uid => ({
                 label: nicks[uid],
                 data: chartValues[uid],
+                borderColor: "#" + Math.floor(Math.random() * (1 << 3 * 8)).toString(16).padStart(6, "0"),
             })),
         },
         options: {
