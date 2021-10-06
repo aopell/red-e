@@ -191,7 +191,7 @@ async function handleChart(client, interaction) {
     const chartOptions = {
         type: "line",
         data: {
-            labels: timesteps.map(t => formattedDateInTimezone(t, tz, "MMM D LT z")),
+            // labels: timesteps.map(t => formattedDateInTimezone(t, tz, "MMM D LT z")),
             datasets: userIds.map(uid => ({
                 label: nicks[uid],
                 data: chartValues[uid],
