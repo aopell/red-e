@@ -191,22 +191,18 @@ async function handleChart(client, interaction) {
     const chartOptions = {
         type: "line",
         data: {
+            labels: timesteps.map(t => formattedDateInTimezone(t, tz, "MMM D LT z")),
             datasets: userIds.map(uid => ({
                 label: nicks[uid],
                 data: chartValues[uid],
                 borderColor: "#" + Math.floor(Math.random() * (1 << 3 * 8)).toString(16).padStart(6, "0"),
-                fill: false,
             })),
         },
         options: {
-            lineTension: true,
             scales: {
                 x: {
                     type: "time",
-                    bounds: "data",
-                    time: {
-                        unit: "hour",
-                    },
+                    distribution: "linear",
                 },
                 // y: {
                 //     beginAtZero: true,
@@ -233,5 +229,5 @@ async function handleChart(client, interaction) {
 
     const attachment = new MessageAttachment(await canvas.renderToBuffer(chartOptions), "test-chart.png");
 
-    interaction.reply({ files: [attachment] });
+    interaction.reply({ files: [attachment], ephemeral: true });
 }
