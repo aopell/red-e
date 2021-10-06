@@ -200,14 +200,14 @@ async function handleChart(client, interaction) {
             })),
         },
         options: {
+            lineTension: 0,
             scales: {
-                x: {
+                xAxes: [{
                     type: "time",
-                    distribution: "linear",
-                },
-                // y: {
-                //     beginAtZero: true,
-                // },
+                    time: {
+                        unit: "hour",
+                    },
+                }],
             },
         },
     };
