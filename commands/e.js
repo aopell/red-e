@@ -99,15 +99,15 @@ async function handleStart(client, interaction) {
     const tz = client.state.getGuildPreference(interaction.guildId, "defaultTimezone", client.config.defaultTimezone);
 
     const estatuses = {
-        [AvailabilityLevel.AVAILABLE]: new EStatus(AvailabilityLevel.AVAILABLE),
-        [EmojiKeys.FIVE_MINUTES]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, Date.now() + (5 * TimeUnit.MINUTES)),
-        [EmojiKeys.FIFTEEN_MINUTES]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, Date.now() + (15 * TimeUnit.MINUTES)),
-        [EmojiKeys.ONE_HOUR]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, Date.now() + (1 * TimeUnit.HOURS)),
-        [EmojiKeys.TWO_HOURS]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, Date.now() + (2 * TimeUnit.HOURS)),
-        [EmojiKeys.TEN_O_CLOCK]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(22, tz)),
-        [EmojiKeys.ELEVEN_O_CLOCK]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(23, tz)),
-        [EmojiKeys.TWELVE_O_CLOCK]: new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(0, tz)),
-        [AvailabilityLevel.UNKNOWN]: new EStatus(AvailabilityLevel.UNKNOWN),
+        [AvailabilityLevel.AVAILABLE]: new EStatus(user.id, AvailabilityLevel.AVAILABLE),
+        [EmojiKeys.FIVE_MINUTES]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, Date.now() + (5 * TimeUnit.MINUTES)),
+        [EmojiKeys.FIFTEEN_MINUTES]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, Date.now() + (15 * TimeUnit.MINUTES)),
+        [EmojiKeys.ONE_HOUR]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, Date.now() + (1 * TimeUnit.HOURS)),
+        [EmojiKeys.TWO_HOURS]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, Date.now() + (2 * TimeUnit.HOURS)),
+        [EmojiKeys.TEN_O_CLOCK]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(22, tz)),
+        [EmojiKeys.ELEVEN_O_CLOCK]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(23, tz)),
+        [EmojiKeys.TWELVE_O_CLOCK]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(0, tz)),
+        [AvailabilityLevel.UNKNOWN]: new EStatus(user.id, AvailabilityLevel.UNKNOWN),
     };
 
     emessage = new EMessage(user.id, channelId, guildId, estatuses[options.get("when").value]);

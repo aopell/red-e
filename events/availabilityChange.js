@@ -33,41 +33,41 @@ module.exports = {
 
         switch (interaction.customId) {
             case AvailabilityLevel.AVAILABLE:
-                emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE));
+                emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE));
                 break;
             case EmojiKeys.AGREE:
                 if (creatorStatus.timeAvailable < Date.now()) {
-                    emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE));
+                    emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE));
                 } else {
-                    emessage.updateStatus(client, userId, new EStatus(creatorStatus.availability, creatorStatus.timeAvailable));
+                    emessage.updateStatus(client, userId, new EStatus(userId, creatorStatus.availability, creatorStatus.timeAvailable));
                 }
                 break;
             case AvailabilityLevel.MAYBE:
-                emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.MAYBE));
+                emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.MAYBE));
                 break;
             case AvailabilityLevel.UNAVAILABLE:
-                emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.UNAVAILABLE));
+                emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.UNAVAILABLE));
                 break;
             case EmojiKeys.FIVE_MINUTES:
-                emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (5 * TimeUnit.MINUTES)));
+                emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (5 * TimeUnit.MINUTES)));
                 break;
             case EmojiKeys.FIFTEEN_MINUTES:
-                emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (15 * TimeUnit.MINUTES)));
+                emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (15 * TimeUnit.MINUTES)));
                 break;
             case EmojiKeys.ONE_HOUR:
-                emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (1 * TimeUnit.HOURS)));
+                emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (1 * TimeUnit.HOURS)));
                 break;
             case EmojiKeys.TWO_HOURS:
-                emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (2 * TimeUnit.HOURS)));
+                emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (2 * TimeUnit.HOURS)));
                 break;
             case EmojiKeys.TEN_O_CLOCK:
-                emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(22, tz)));
+                emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(22, tz)));
                 break;
             case EmojiKeys.ELEVEN_O_CLOCK:
-                emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(23, tz)));
+                emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(23, tz)));
                 break;
             case EmojiKeys.TWELVE_O_CLOCK:
-                emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(0, tz)));
+                emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(0, tz)));
                 break;
             default:
                 interaction.reply({ content: "Welp... you done clicked a button. But we don't know what it do!", ephemeral: true });

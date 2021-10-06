@@ -38,19 +38,19 @@ module.exports = {
 
         switch (buttonAction) {
             case AvailabilityLevel.AVAILABLE:
-                newStatus = emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE));
+                newStatus = emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE));
                 break;
             case AvailabilityLevel.MAYBE:
-                newStatus = emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.MAYBE));
+                newStatus = emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.MAYBE));
                 break;
             case AvailabilityLevel.UNAVAILABLE:
-                newStatus = emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.UNAVAILABLE));
+                newStatus = emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.UNAVAILABLE));
                 break;
             case EmojiKeys.FIVE_MINUTES:
-                newStatus = emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, Date.now() + (5 * TimeUnit.MINUTES)));
+                newStatus = emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, Date.now() + (5 * TimeUnit.MINUTES)));
                 break;
             case EmojiKeys.FIFTEEN_MINUTES:
-                newStatus = emessage.updateStatus(client, userId, new EStatus(AvailabilityLevel.AVAILABLE_LATER, Date.now() + (15 * TimeUnit.MINUTES)));
+                newStatus = emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, Date.now() + (15 * TimeUnit.MINUTES)));
                 break;
             default:
                 interaction.reply({ content: "Welp... you done clicked a button. But we don't know what it do!", ephemeral: true });
