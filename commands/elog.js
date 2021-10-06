@@ -204,9 +204,6 @@ async function handleChart(client, interaction) {
             scales: {
                 xAxes: [{
                     type: "time",
-                    time: {
-                        unit: "hour",
-                    },
                 }],
             },
         },
