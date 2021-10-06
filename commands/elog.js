@@ -112,7 +112,6 @@ async function handleList(client, interaction) {
 async function handleView(client, interaction) {
     const { channelId, guildId } = interaction;
     const filename = interaction.options.getString("file");
-    const tz = client.state.getGuildPreference(interaction.guildId, "defaultTimezone", client.config.defaultTimezone);
     if (filename.includes("/")) {
         interaction.reply({ content: `${EmojiText.X_MARK} File name cannot contain \`/\`.`, ephemeral: true });
         return;
@@ -192,7 +191,6 @@ async function handleChart(client, interaction) {
     const chartOptions = {
         type: "line",
         data: {
-            labels: timesteps.map(t => formattedDateInTimezone(t, tz, "MMM D LT z")),
             datasets: userIds.map(uid => ({
                 label: nicks[uid],
                 data: chartValues[uid],
@@ -200,6 +198,7 @@ async function handleChart(client, interaction) {
             })),
         },
         options: {
+            lineTension: true,
             scales: {
                 x: {
                     type: "time",
@@ -230,5 +229,5 @@ async function handleChart(client, interaction) {
 
     const attachment = new MessageAttachment(await canvas.renderToBuffer(chartOptions), "test-chart.png");
 
-    interaction.reply({ files: [attachment], ephemeral: true });
+    interaction.reply({ files: [attachment] });
 }
