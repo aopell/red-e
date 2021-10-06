@@ -140,17 +140,17 @@ async function handleChart(client, interaction) {
         timesteps.push(status.creationTimestamp);
         for (const userId of userIds) {
             if (userId == status.userId) {
-                chartValues[userId].push(AVAILABILITY_VALUES[status.availability]);
+                chartValues[userId].push({ x: status.creationTimestamp, y: AVAILABILITY_VALUES[status.availability] });
                 timesAvailable[userId] = status.timeAvailable ?? 0;
                 lastUpdated[userId] = status.creationTimestamp;
             } else if (i == 0) {
-                chartValues[userId].push(AVAILABILITY_VALUES[AvailabilityLevel.UNKNOWN]);
+                chartValues[userId].push({ x: status.creationTimestamp, y: AVAILABILITY_VALUES[AvailabilityLevel.UNKNOWN] });
             } else if (timesAvailable[userId]) {
                 const availabilityPercentage = (status.creationTimestamp - lastUpdated[userId]) / (timesAvailable[userId] - lastUpdated[userId]);
                 const valueAdd = (AVAILABILITY_VALUES[AvailabilityLevel.AVAILABLE] - AVAILABILITY_VALUES[AvailabilityLevel.AVAILABLE_LATER]) * availabilityPercentage;
-                chartValues[userId].push(AVAILABILITY_VALUES[AvailabilityLevel.AVAILABLE_LATER] + valueAdd);
+                chartValues[userId].push({ x: status.creationTimestamp, y: AVAILABILITY_VALUES[AvailabilityLevel.AVAILABLE_LATER] + valueAdd });
             } else {
-                chartValues[userId].push(chartValues[userId][i - 1]);
+                chartValues[userId].push({ x: status.creationTimestamp, y: chartValues[userId][i - 1] });
             }
         }
     }
@@ -166,11 +166,14 @@ async function handleChart(client, interaction) {
             })),
         },
         options: {
-            // scales: {
-            //     y: {
-            //         beginAtZero: true,
-            //     },
-            // },
+            scales: {
+                x: {
+                    type: "time",
+                },
+                // y: {
+                //     beginAtZero: true,
+                // },
+            },
         },
     };
 
