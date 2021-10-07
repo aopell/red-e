@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
+const { MessageAttachment } = require("discord.js");
 const fs = require("fs");
 const { EmojiText, formattedDateInTimezone, createChart } = require("../util");
 
@@ -120,7 +121,7 @@ async function handleView(client, interaction) {
 
     const json = JSON.parse(fs.readFileSync(`logs/messages/${guildId}/${channelId}/${filename}`));
 
-    interaction.reply({ files: [Buffer.from(JSON.stringify(json, null, 4))], ephemeral: true });
+    interaction.reply({ files: [new MessageAttachment(Buffer.from(JSON.stringify(json, null, 4)), filename)], ephemeral: true });
 }
 
 /**
