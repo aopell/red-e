@@ -1,9 +1,13 @@
 const moment = require("moment-timezone");
+const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
+const { MessageAttachment } = require("discord.js");
 
 /**
  * @typedef {import('discord.js').GuildMember} GuildMember
  * @typedef {import('discord.js').User} User
  * @typedef {import('./models/e-status')} EStatus
+ * @typedef {import('./typedefs').Client} Client
+ * @typedef {import('./models/e-message')} EMessage
  */
 
 const AvailabilityLevel = Object.freeze({
@@ -23,6 +27,7 @@ const AvailabilityColors = Object.freeze({
     AVAILABLE: 0x226699,
     READY: 0x2cd261,
     DONE: 0x9241d4,
+    LATE: 0xff5722,
 });
 
 const EmojiKeys = Object.freeze({
@@ -41,9 +46,11 @@ const EmojiKeys = Object.freeze({
  * Gets the average color of all statuses
  * @param {import('./typedefs').Config} config Bot config
  * @param {EStatus[]} statuses List of statuses
- * @returns {number}
+ * @param {bool} [calcAverage] If true, averages all of the colors
+ * @param {number} [currentTime] Allows changing the current time
+ * @returns {number|number[]}
  */
-function getColorFromStatuses(config, statuses) {
+function getColorFromStatuses(config, statuses, calcAverage = true, currentTime = Date.now()) {
     function getAverageColor(colors) {
         let r = 0;
         let g = 0;
@@ -81,14 +88,18 @@ function getColorFromStatuses(config, statuses) {
     const colors = [];
     for (const status of statuses) {
         if (status.availability === AvailabilityLevel.AVAILABLE_LATER) {
-            const weight = (Date.now() - status.creationTimestamp) / (status.timeAvailable - status.creationTimestamp);
-            colors.push(getWeightedAverageColor(AvailabilityColors[AvailabilityLevel.MAYBE], AvailabilityColors[AvailabilityLevel.AVAILABLE], weight));
+            if (status.timeAvailable < currentTime) {
+                colors.push(AvailabilityColors["LATE"]);
+            } else {
+                const weight = (currentTime - status.creationTimestamp) / (status.timeAvailable - status.creationTimestamp);
+                colors.push(getWeightedAverageColor(AvailabilityColors[AvailabilityLevel.MAYBE], AvailabilityColors[AvailabilityLevel.AVAILABLE], weight));
+            }
         } else {
             colors.push(AvailabilityColors[status.availability] ?? AvailabilityColors[AvailabilityLevel.UNKNOWN]);
         }
     }
 
-    return getAverageColor(colors);
+    return calcAverage ? getAverageColor(colors) : colors;
 }
 
 /**
@@ -206,6 +217,105 @@ const EmojiText = Object.freeze({
     X_MARK: ":x:",
 });
 
+/**
+ * Creates a chart representing the statuses in this EMessage
+ * @param {EMessage} emessage The message to turn into a chart
+ * @param {Client} client The bot client
+ * @returns {MessageAttachment}
+ */
+async function createChart(emessage, client) {
+    const userIds = Object.keys(emessage.statuses);
+    const tz = client.state.getGuildPreference(emessage.guildId, "defaultTimezone", client.config.defaultTimezone);
+    const labels = [];
+    for (const userId of userIds) {
+        labels.push(nicknameOrUsername(await getGuildMemberOrUser(client, emessage.guildId, userId)));
+    }
+
+    const MSECS_PER_MIN = 60000;
+    const startingTime = new Date(emessage.statusLog[0].creationTimestamp);
+    startingTime.setMilliseconds(0);
+    startingTime.setSeconds(0);
+    const datasets = [];
+    /** @type {Map<string, EStatus>} */
+    const lastStatus = Object.fromEntries(userIds.map(u => [u, { userId: u, availability: AvailabilityLevel.UNKNOWN, creationTimestamp: startingTime.valueOf() }]));
+    lastStatus[emessage.creatorId] = emessage.statusLog[0];
+    let nextIndex = 0;
+
+    for (let timestep = startingTime.valueOf(); timestep < emessage.statusLog[emessage.statusLog.length - 1].creationTimestamp + MSECS_PER_MIN; timestep += MSECS_PER_MIN) {
+        while (nextIndex < emessage.statusLog.length && emessage.statusLog[nextIndex].creationTimestamp < timestep) {
+            const nextStatus = emessage.statusLog[nextIndex];
+            lastStatus[nextStatus.userId] = nextStatus;
+            nextIndex++;
+        }
+
+        const dataset = {
+            label: formattedDateInTimezone(timestep, tz, "LT"),
+            data: userIds.map(() => 1),
+            backgroundColor: getColorFromStatuses(client.config, userIds.map(u => lastStatus[u]), false, timestep, true).map(n => "#" + n.toString(16)),
+            borderWidth: 0,
+        };
+
+        datasets.push(dataset);
+    }
+
+    const chartOptions = {
+        type: "horizontalBar",
+        data: {
+            labels,
+            datasets,
+        },
+        options: {
+            title: {
+                display: true,
+                text: formattedDateInTimezone(startingTime.valueOf(), tz, "LLLL z"),
+                fontSize: 36,
+            },
+            scales: {
+                xAxes: [{
+                    stacked: true,
+                    ticks: {
+                        callback: function (value, index, values) {
+                            return formattedDateInTimezone(startingTime.valueOf() + MSECS_PER_MIN * value, tz, "LT");
+                        },
+                        fontSize: 20,
+                    },
+                }],
+                yAxes: [{
+                    stacked: true,
+                    ticks: {
+                        fontSize: 20,
+                        fontStyle: "bold",
+                    },
+                }],
+            },
+            legend: {
+                display: false,
+            },
+        },
+    };
+
+    console.log(chartOptions);
+
+    const width = 1920;
+    const height = 1080;
+    const canvas = new ChartJSNodeCanvas({
+        width, height, plugins: {
+            modern: [{
+                beforeDraw: chart => {
+                    const ctx = chart.ctx;
+                    ctx.save();
+                    ctx.fillStyle = "#ffffff";
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.restore();
+                },
+            }],
+        },
+    });
+
+    const attachment = new MessageAttachment(await canvas.renderToBuffer(chartOptions), "echart.png");
+    return attachment;
+}
+
 module.exports = {
     AvailabilityLevel,
     AvailabilityColors,
@@ -221,4 +331,5 @@ module.exports = {
     formattedDateInTimezone,
     discordTimestamp,
     getNearestHourAfter,
+    createChart,
 };

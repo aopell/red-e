@@ -1,8 +1,6 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const fs = require("fs");
-const { EmojiText, formattedDateInTimezone, AvailabilityLevel, nicknameOrUsername, getGuildMemberOrUser } = require("../util");
-const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
-const { MessageAttachment } = require("discord.js");
+const { EmojiText, formattedDateInTimezone, createChart } = require("../util");
 
 /**
  * @typedef {import('../typedefs').Client} Client
@@ -133,7 +131,6 @@ async function handleView(client, interaction) {
 async function handleChart(client, interaction) {
     const { channelId, guildId } = interaction;
     const filename = interaction.options.getString("file");
-    const tz = client.state.getGuildPreference(interaction.guildId, "defaultTimezone", client.config.defaultTimezone);
     if (filename.includes("/")) {
         interaction.reply({ content: `${EmojiText.X_MARK} File name cannot contain \`/\`.`, ephemeral: true });
         return;
@@ -142,90 +139,12 @@ async function handleChart(client, interaction) {
         return;
     }
 
-    /** @type {EMessage} */
-    const json = JSON.parse(fs.readFileSync(`logs/messages/${guildId}/${channelId}/${filename}`));
+    const filePath = `logs/messages/${guildId}/${channelId}/${filename}`;
+    const json = JSON.parse(fs.readFileSync(filePath));
 
-    const AVAILABILITY_VALUES = {
-        [AvailabilityLevel.DONE]: 8,
-        [AvailabilityLevel.READY]: 7,
-        [AvailabilityLevel.AVAILABLE]: 5,
-        [AvailabilityLevel.AVAILABLE_LATER]: 2,
-        [AvailabilityLevel.MAYBE]: 1,
-        [AvailabilityLevel.UNKNOWN]: 0,
-        [AvailabilityLevel.UNAVAILABLE]: -1,
-    };
+    await interaction.deferReply();
 
-    const userIds = Object.keys(json.statuses);
-    const chartValues = {};
-    const timesAvailable = {};
-    const lastUpdated = {};
-    const nicks = {};
-    const timesteps = [];
-    for (const userId of userIds) {
-        chartValues[userId] = [];
-        timesAvailable[userId] = 0;
-        lastUpdated[userId] = 0;
-        nicks[userId] = nicknameOrUsername(await getGuildMemberOrUser(client, guildId, userId));
-    }
+    const attachment = await createChart(json, client);
 
-    for (let i = 0; i < json.statusLog.length; i++) {
-        const status = json.statusLog[i];
-        timesteps.push(status.creationTimestamp);
-        for (const userId of userIds) {
-            if (userId == status.userId) {
-                chartValues[userId].push({ x: status.creationTimestamp, y: AVAILABILITY_VALUES[status.availability] });
-                timesAvailable[userId] = status.timeAvailable ?? 0;
-                lastUpdated[userId] = status.creationTimestamp;
-            } else if (i == 0) {
-                chartValues[userId].push({ x: status.creationTimestamp, y: AVAILABILITY_VALUES[AvailabilityLevel.UNKNOWN] });
-            } else if (timesAvailable[userId]) {
-                const availabilityPercentage = (status.creationTimestamp - lastUpdated[userId]) / (timesAvailable[userId] - lastUpdated[userId]);
-                const valueAdd = (AVAILABILITY_VALUES[AvailabilityLevel.AVAILABLE] - AVAILABILITY_VALUES[AvailabilityLevel.AVAILABLE_LATER]) * availabilityPercentage;
-                chartValues[userId].push({ x: status.creationTimestamp, y: AVAILABILITY_VALUES[AvailabilityLevel.AVAILABLE_LATER] + valueAdd });
-            } else {
-                chartValues[userId].push({ x: status.creationTimestamp, y: chartValues[userId][i - 1] });
-            }
-        }
-    }
-
-    const chartOptions = {
-        type: "line",
-        data: {
-            // labels: timesteps.map(t => formattedDateInTimezone(t, tz, "MMM D LT z")),
-            datasets: userIds.map(uid => ({
-                label: nicks[uid],
-                data: chartValues[uid],
-                borderColor: "#" + Math.floor(Math.random() * (1 << 3 * 8)).toString(16).padStart(6, "0"),
-                fill: false,
-                lineTension: 0,
-            })),
-        },
-        options: {
-            scales: {
-                xAxes: [{
-                    type: "time",
-                }],
-            },
-        },
-    };
-
-    const width = 1920;
-    const height = 1080;
-    const canvas = new ChartJSNodeCanvas({
-        width, height, plugins: {
-            modern: [{
-                beforeDraw: chart => {
-                    const ctx = chart.ctx;
-                    ctx.save();
-                    ctx.fillStyle = "#ffffff";
-                    ctx.fillRect(0, 0, width, height);
-                    ctx.restore();
-                },
-            }],
-        },
-    });
-
-    const attachment = new MessageAttachment(await canvas.renderToBuffer(chartOptions), "test-chart.png");
-
-    interaction.reply({ files: [attachment], ephemeral: true });
+    await interaction.followUp({ files: [attachment], ephemeral: true });
 }

@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const EMessage = require("../models/e-message");
 const EStatus = require("../models/e-status");
-const { AvailabilityLevel, EmojiKeys, TimeUnit, getNearestHourAfter, EmojiText } = require("../util");
+const { AvailabilityLevel, EmojiKeys, TimeUnit, getNearestHourAfter, EmojiText, createChart } = require("../util");
 
 /**
  * @typedef {import('../typedefs').Client} Client
@@ -43,6 +43,11 @@ module.exports = {
             subcommand
                 .setName("delete")
                 .setDescription("Delete the current EMessage if one exists"),
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName("chart")
+                .setDescription("Creates a chart of the current EMessage if one exists"),
         ),
 
 
@@ -56,6 +61,7 @@ module.exports = {
             show: handleShow,
             start: handleStart,
             delete: handleDelete,
+            chart: handleChart,
         };
 
         await subcommands[interaction.options.getSubcommand()](client, interaction);
@@ -121,7 +127,7 @@ async function handleStart(client, interaction) {
 }
 
 /**
- * Executes the "show" subcommand
+ * Executes the "delete" subcommand
  * @param {Client} client The current client
  * @param {CommandInteraction} interaction The interaction object
  */
@@ -133,8 +139,23 @@ async function handleDelete(client, interaction) {
         return;
     }
 
-    // TODO: log the message
     emessage.updateAllMessages(client, true);
     client.state.setEMessage(guildId, channelId, undefined);
     interaction.reply({ content: `${EmojiText.CHECK_TICK} Successfully deleted e message`, ephemeral: true });
+}
+
+/**
+ * Executes the "chart" subcommand
+ * @param {Client} client The current client
+ * @param {CommandInteraction} interaction The interaction object
+ */
+async function handleChart(client, interaction) {
+    const { channelId, guildId } = interaction;
+    const emessage = client.state.getEMessage(guildId, channelId);
+    if (!emessage) {
+        interaction.reply({ content: `${EmojiText.X_MARK} There is no e message in this channel`, ephemeral: true });
+        return;
+    }
+
+    interaction.reply({ files: [createChart(emessage, client)] });
 }
