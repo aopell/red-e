@@ -294,8 +294,6 @@ async function createChart(emessage, client) {
         },
     };
 
-    console.log(chartOptions);
-
     const width = 1920;
     const height = 1080;
     const canvas = new ChartJSNodeCanvas({
