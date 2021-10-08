@@ -159,5 +159,5 @@ async function handleChart(client, interaction) {
     }
 
     await interaction.deferReply();
-    await interaction.followUp({ files: [createChart(JSON.parse(JSON.stringify(emessage)), client)] });
+    await interaction.followUp({ files: [await createChart(emessage, client)] });
 }
