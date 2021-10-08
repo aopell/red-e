@@ -27,7 +27,7 @@ const AvailabilityColors = Object.freeze({
     AVAILABLE: 0x226699,
     READY: 0x2cd261,
     DONE: 0x9241d4,
-    LATE: 0xff5722,
+    LATE: 0xFF7939,
 });
 
 const EmojiKeys = Object.freeze({
