@@ -31,7 +31,7 @@ module.exports = {
                 .addStringOption(option =>
                     option
                         .setName("file")
-                        .setDescription("The log file to display as a chart")
+                        .setDescription("The log file to view")
                         .setRequired(true),
                 ),
         )
@@ -44,6 +44,12 @@ module.exports = {
                         .setName("file")
                         .setDescription("The log file to display as a chart")
                         .setRequired(true),
+                )
+                .addBooleanOption(option =>
+                    option
+                        .setName("ephemeral")
+                        .setDescription("Whether this should be an ephemeral response. Defaults to false.")
+                        .setRequired(false),
                 ),
         ),
 
@@ -143,9 +149,11 @@ async function handleChart(client, interaction) {
     const filePath = `logs/messages/${guildId}/${channelId}/${filename}`;
     const json = JSON.parse(fs.readFileSync(filePath));
 
-    await interaction.deferReply();
+    const ephemeral = interaction.options.getBoolean("ephemeral") ?? false;
+
+    await interaction.deferReply({ ephemeral });
 
     const attachment = await createChart(json, client);
 
-    await interaction.followUp({ files: [attachment], ephemeral: true });
+    await interaction.followUp({ files: [attachment], ephemeral });
 }

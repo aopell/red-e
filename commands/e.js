@@ -47,7 +47,13 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand
                 .setName("chart")
-                .setDescription("Creates a chart of the current EMessage if one exists"),
+                .setDescription("Creates a chart of the current EMessage if one exists")
+                .addBooleanOption(option =>
+                    option
+                        .setName("ephemeral")
+                        .setDescription("Whether this should be an ephemeral response. Defaults to false.")
+                        .setRequired(false),
+                ),
         ),
 
 
@@ -157,6 +163,8 @@ async function handleChart(client, interaction) {
         return;
     }
 
-    await interaction.deferReply();
-    await interaction.followUp({ files: [await createChart(emessage, client)] });
+    const ephemeral = interaction.options.getBoolean("ephemeral") ?? false;
+
+    await interaction.deferReply({ ephemeral });
+    await interaction.followUp({ files: [await createChart(emessage, client)], ephemeral });
 }
