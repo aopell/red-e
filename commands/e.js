@@ -119,8 +119,7 @@ async function handleStart(client, interaction) {
     emessage = new EMessage(user.id, channelId, guildId, estatuses[options.get("when").value]);
     client.state.setEMessage(guildId, channelId, emessage);
 
-    await interaction.reply(await emessage.toMessage(client));
-    const message = interaction.fetchReply();
+    const message = await interaction.reply({ ...(await emessage.toMessage(client)), fetchReply: true });
     if (message) {
         emessage.messageIds.push(message.id);
         client.state.setEMessage(guildId, channelId, emessage);
