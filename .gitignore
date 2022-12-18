@@ -1,5 +1,5 @@
-config.json
-state.json
+src/config.json
+dist/state.json
 
 # Logs
 logs

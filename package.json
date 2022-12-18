@@ -1,21 +1,21 @@
 {
-  "name": "e-bot",
+  "name": "red-e",
   "version": "1.0.0",
   "description": "A Discord bot for keeping track of when people are available",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aopell/e-bot.git"
+    "url": "git+https://github.com/aopell/red-e.git"
   },
   "author": "Aaron Opell",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/aopell/e-bot/issues"
+    "url": "https://github.com/aopell/red-e/issues"
   },
-  "homepage": "https://github.com/aopell/e-bot#readme",
+  "homepage": "https://github.com/aopell/red-e#readme",
   "dependencies": {
     "@discordjs/builders": "^0.6.0",
     "@discordjs/rest": "^0.1.0-canary.0",
