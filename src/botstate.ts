@@ -1,34 +1,26 @@
-const fs = require("fs");
-const EMessage = require("./models/e-message");
-const GuildPreferences = require("./models/guild-preferences");
+import fs from "fs";
+import EMessage from "./models/e-message";
+import GuildPreferences from "./models/guild-preferences";
+import type { Snowflake } from "discord.js";
 
-/**
- * @typedef {import('discord.js').Snowflake} Snowflake
- */
+export default class ClientState {
+    EMessages: Record<string, Record<string, EMessage | undefined>>;
+    GuildPreferences: Record<Snowflake, GuildPreferences>;
 
-class ClientState {
     /**
      * Creates a new `ClientState`
-     * @param {Map<Snowflake, Map<Snowflake, EMessage>} emessages `EMessage`s for all channels
-     * @param {Map<Snowflake, GuildPreferences} guildPreferences `GuildPreferences` for all guilds
+     * @param emessages `EMessage`s for all channels
+     * @param guildPreferences `GuildPreferences` for all guilds
      */
-    constructor(emessages, guildPreferences) {
-        /**
-         * The `EMessage`s for all channels
-         * @type {Map<Snowflake, Map<Snowflake, EMessage>}
-         */
+    constructor(emessages?: Record<Snowflake, Record<Snowflake, EMessage | undefined>>, guildPreferences?: Record<Snowflake, GuildPreferences>) {
         this.EMessages = emessages ?? {};
-        /**
-         * The `GuildPreferences` for all guilds
-         * @type {Map<Snowflake, GuildPreferences}
-         */
         this.GuildPreferences = guildPreferences ?? {};
     }
 
     static load() {
-        let json = {};
+        let json = new ClientState();
         if (fs.existsSync("state.json")) {
-            json = JSON.parse(fs.readFileSync("state.json"));
+            json = <ClientState>JSON.parse(fs.readFileSync("state.json").toString());
         }
 
         return new ClientState(
@@ -44,22 +36,22 @@ class ClientState {
 
     /**
      * Gets the `EMessage` associated with the guild and channel
-     * @param {Snowflake} guildId The guild that contains the channel
-     * @param {Snowflake} channelId The channel whose EMessage to lookup
-     * @returns {EMessage} The `EMessage` associated with that guild and channel, or `undefined`
+     * @param guildId The guild that contains the channel
+     * @param channelId The channel whose EMessage to lookup
+     * @returns The `EMessage` associated with that guild and channel, or `undefined`
      */
-    getEMessage(guildId, channelId) {
+    getEMessage(guildId: Snowflake, channelId: Snowflake): EMessage | undefined {
         const message = this.EMessages?.[guildId]?.[channelId];
         return message ? EMessage.fromJSON(message) : undefined;
     }
 
     /**
      * Sets the `EMessage` associated with the guild and channel, and saves state
-     * @param {Snowflake} guildId The guild that contains the channel
-     * @param {Snowflake} channelId The channel whose EMessage to update
-     * @param {EMessage} emessage The `EMessage` to associate with that guild and channel
+     * @param guildId The guild that contains the channel
+     * @param channelId The channel whose EMessage to update
+     * @param emessage The `EMessage` to associate with that guild and channel
      */
-    setEMessage(guildId, channelId, emessage) {
+    setEMessage(guildId: Snowflake, channelId: Snowflake, emessage?: EMessage) {
         this.EMessages[guildId] = this.EMessages[guildId] ?? {};
 
         const existing = this.EMessages[guildId][channelId];
@@ -74,11 +66,10 @@ class ClientState {
 
     /**
      * Gets all `EMessage`s in a guild
-     * @param {Snowflake} guildId The guild to get `EMessage`s for
-     * @returns {EMessage[]}
+     * @param guildId The guild to get `EMessage`s for
      */
-    getAllGuildEMessages(guildId) {
-        const emessages = [];
+    getAllGuildEMessages(guildId: Snowflake): EMessage[] {
+        const emessages: EMessage[] = [];
         for (const channelId in (this.EMessages?.[guildId] ?? [])) {
             const emessage = this.getEMessage(guildId, channelId);
             if (emessage) {
@@ -90,10 +81,9 @@ class ClientState {
 
     /**
      * Gets all `EMessage`s
-     * @returns {EMessage[]}
      */
-    getAllEMessages() {
-        const emessages = [];
+    getAllEMessages(): EMessage[] {
+        const emessages: EMessage[] = [];
         for (const guildId in (this.EMessages ?? [])) {
             emessages.push(...this.getAllGuildEMessages(guildId));
         }
@@ -102,24 +92,23 @@ class ClientState {
 
     /**
      * Gets the preference for the guild if it exists
-     * @param {Snowflake} guildId The guild from which to fetch a preference
-     * @param {string} pref The preference to fetch
-     * @param {any} [fallback] A fallback value if the preference doesn't exist
-     * @returns {any}
+     * @param guildId The guild from which to fetch a preference
+     * @param pref The preference to fetch
+     * @param fallback A fallback value if the preference doesn't exist
      */
-    getGuildPreference(guildId, pref, fallback = undefined) {
+    getGuildPreference(guildId: Snowflake, pref: keyof GuildPreferences, fallback: any = undefined): any {
         const guildPref = this.GuildPreferences?.[guildId]?.[pref];
         return guildPref ?? fallback;
     }
 
     /**
      * Gets the specified preference for all guilds
-     * @param {string} pref The preference to fetch
-     * @param {any} [fallback] A fallback value if the preference doesn't exist
-     * @returns {Map<Snowflake, any>} Map of guild ID to the preference value
+     * @param pref The preference to fetch
+     * @param fallback A fallback value if the preference doesn't exist
+     * @returns Map of guild ID to the preference value
      */
-    getAllGuildsPreference(pref, fallback = undefined) {
-        const allPrefs = {};
+    getAllGuildsPreference(pref: keyof GuildPreferences, fallback: any = undefined): { [key: Snowflake]: any } {
+        const allPrefs: Record<Snowflake, any> = {};
         for (const guildId in this.GuildPreferences) {
             allPrefs[guildId] = this.getGuildPreference(guildId, pref, fallback);
         }
@@ -128,11 +117,11 @@ class ClientState {
 
     /**
      * Sets the preference for a guild, and saves state
-     * @param {Snowflake} guildId The guild for which to set a preference
-     * @param {string} pref The preference to set
-     * @param {any} value The value to set for the preference
+     * @param guildId The guild for which to set a preference
+     * @param pref The preference to set
+     * @param value The value to set for the preference
      */
-    setGuildPreference(guildId, pref, value) {
+    setGuildPreference(guildId: Snowflake, pref: keyof GuildPreferences, value: any) {
         let guildPrefs = this.GuildPreferences[guildId];
         if (!guildPrefs) {
             this.GuildPreferences[guildId] = new GuildPreferences(guildId);
@@ -142,5 +131,3 @@ class ClientState {
         this.save();
     }
 }
-
-module.exports = ClientState;

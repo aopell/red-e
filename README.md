@@ -1,4 +1,4 @@
-# e-bot
-A Discord bot for keeping track of when people are available
+# red-e
+A Discord bot for coordinating availability
 
-v2 -- written in JavaScript
+v3 -- written in TypeScript

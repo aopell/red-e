@@ -1,21 +1,19 @@
-/**
- * @typedef {import('../typedefs').Client} Client
- * @typedef {import('discord.js').VoiceState} VoiceState
- */
+import EStatus from "../models/e-status";
+import { AvailabilityLevel } from "../util";
 
-const EStatus = require("../models/e-status");
-const { AvailabilityLevel } = require("../util");
+import type { RedEClient } from "../typedefs";
+import type { VoiceState } from "discord.js";
 
-module.exports = {
+export default {
     name: "voiceStateUpdate",
     once: false,
     /**
      * Handles voice state update events
-     * @param {Client} client The bot client
-     * @param {VoiceState} oldState Old voice state
-     * @param {VoiceState} newState New voice state
+     * @param client The bot client
+     * @param oldState Old voice state
+     * @param newState New voice state
      */
-    async execute(client, oldState, newState) {
+    async execute(client: RedEClient, oldState: VoiceState, newState: VoiceState) {
         const guildId = oldState.guild.id;
         const userId = oldState.id;
         const prevChannel = oldState.channelId;

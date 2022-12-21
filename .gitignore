@@ -1,5 +1,4 @@
-config.json
-state.json
+src/config.json
 
 # Logs
 logs

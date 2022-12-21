@@ -1,29 +1,34 @@
-const { Embed } = require("@discordjs/builders");
-const { MessageActionRow, MessageButton, MessageSelectMenu, Role } = require("discord.js");
-const { nicknameOrUsername, getGuildMemberOrUser, discordTimestamp, getStatusMessage, getColorFromStatuses, AvailabilityLevel, EmojiKeys, formattedDateInTimezone, TimeUnit } = require("../util");
-const EStatus = require("./e-status");
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder } from "discord.js";
+import { getGuildMemberOrUser, discordTimestamp, getStatusMessage, getColorFromStatuses, AvailabilityLevel, EmojiKeys, TimeUnit, TimestampFlags } from "../util";
+import EStatus from "./e-status";
 
-/**
- * @typedef {import('../typedefs').Client} Client
- * @typedef {import('discord.js').TextChannel} TextChannel
- * @typedef {import('discord.js').Snowflake} Snowflake
- * @typedef {import('../state')} ClientState
- */
+import type { RedEClient } from "../typedefs";
+import { TextChannel, Snowflake } from "discord.js";
+import { ButtonStyle } from "discord.js";
 
-class EMessage {
+export default class EMessage {
+    creatorId: Snowflake;
+    channelId: Snowflake;
+    guildId: Snowflake;
+    messageIds: Snowflake[];
+    statusLog: EStatus[];
+    statuses: Record<string, number>;
+    creationTimestamp: number;
+    lastUpdated: number;
+
     /**
      * Creates a new `EMessage`
-     * @param {Snowflake} creatorId ID of the message creator
-     * @param {Snowflake} channelId ID of the channel where the message was created
-     * @param {Snowflake} guildId ID of the guild where the message was created
-     * @param {EStatus} senderStatus Initial status for the message creator
+     * @param creatorId ID of the message creator
+     * @param channelId ID of the channel where the message was created
+     * @param guildId ID of the guild where the message was created
+     * @param senderStatus Initial status for the message creator
      */
-    constructor(creatorId, channelId, guildId, senderStatus) {
+    constructor(creatorId: Snowflake, channelId: Snowflake, guildId: Snowflake, senderStatus?: EStatus) {
         this.creatorId = creatorId;
         this.channelId = channelId;
         this.guildId = guildId;
         this.messageIds = [];
-        this.statusLog = [senderStatus];
+        this.statusLog = senderStatus ? [senderStatus] : [];
         this.statuses = { [creatorId]: 0 };
         this.creationTimestamp = Date.now();
         this.lastUpdated = Date.now();
@@ -31,33 +36,28 @@ class EMessage {
 
     /**
      * Creates an `EMessage` from a JSON object
-     * @param {object} obj The object to deserialize
-     * @returns {EMessage}
+     * @param obj The object to deserialize
      */
-    static fromJSON(obj) {
-        const emessage = new EMessage();
-        emessage.creatorId = obj.creatorId;
-        emessage.channelId = obj.channelId;
-        emessage.guildId = obj.guildId;
+    static fromJSON(obj: any): EMessage {
+        const emessage = new EMessage(obj.creatorId, obj.channelId, obj.guildId);
         emessage.messageIds = obj.messageIds;
-        emessage.statusLog = obj.statusLog.map(s => EStatus.fromJSON(s));
+        emessage.statusLog = obj.statusLog.map((s: any) => EStatus.fromJSON(s));
         emessage.statuses = obj.statuses;
         emessage.creationTimestamp = obj.creationTimestamp;
         emessage.lastUpdated = obj.lastUpdated;
         return emessage;
     }
 
-    get proposedTime() {
+    get proposedTime(): number | undefined {
         const creatorStatus = this.getStatus(this.creatorId);
         return creatorStatus?.timeAvailable ?? creatorStatus?.creationTimestamp;
     }
 
     /**
      * Gets the most recent status of a given user
-     * @param {Snowflake} userId ID of the user to get status of
-     * @returns {EStatus} the status of the requested user, or undefined
+     * @param userId ID of the user to get status of
      */
-    getStatus(userId) {
+    getStatus(userId: Snowflake): EStatus | undefined {
         const logIndex = this.statuses[userId];
         if (logIndex === undefined) {
             return undefined;
@@ -67,13 +67,12 @@ class EMessage {
 
     /**
      * Updates the status for the provided user with the given status
-     * @param {Client} client The bot client
-     * @param {Snowflake} userId ID of the user whose status to update
-     * @param {EStatus} status the new status for that user
-     * @param {boolean} updateRoles whether or not to update the availability role's members
-     * @returns {EStatus} The value of the `status` argument
+     * @param client The bot client
+     * @param userId ID of the user whose status to update
+     * @param status the new status for that user
+     * @param updateRoles whether or not to update the availability role's members
      */
-    updateStatus(client, userId, status, updateRoles = true) {
+    updateStatus(client: RedEClient, userId: Snowflake, status: EStatus, updateRoles = true): EStatus {
         const newLength = this.statusLog.push(status);
         this.statuses[userId] = newLength - 1;
         this.lastUpdated = Date.now();
@@ -84,15 +83,20 @@ class EMessage {
 
     /**
      * Updates the guild's availability role, if it exists
-     * @param {Client} client The bot client
+     * @param client The bot client
      */
-    async updateAvailabilityRole(client) {
+    async updateAvailabilityRole(client: RedEClient) {
         const roleId = client.state.getGuildPreference(this.guildId, "availabilityRole", null);
         if (!roleId) {
             return;
         }
         const guild = await client.guilds.fetch(this.guildId);
         const role = await guild.roles.fetch(roleId);
+
+        if (role === null) {
+            console.warn(`Couldn't update availability role ${roleId}: Role not found`);
+            return;
+        }
 
         const memberIds = (await guild.members.list({ limit: 500 })).map(u => u.id);
 
@@ -111,48 +115,51 @@ class EMessage {
 
     /**
      * Pings any late users
-     * @param {Client} client The bot client
+     * @param client The bot client
      */
-    async pingLateUsers(client) {
+    async pingLateUsers(client: RedEClient) {
         for (const userId in this.statuses) {
             const status = this.getStatus(userId);
             if (
-                status.availability == AvailabilityLevel.AVAILABLE_LATER
+                status
+                && status.availability == AvailabilityLevel.AVAILABLE_LATER
                 && status.reminderCount < client.config.latePings.length
+                && status.timeAvailable
                 && status.timeAvailable + (client.config.latePings[status.reminderCount] * TimeUnit.MINUTES) < Date.now()
             ) {
                 status.reminderCount += 1;
-                /**
-                 * @type {TextChannel}
-                 */
                 const channel = await client.channels.fetch(this.channelId);
                 const msg = client.config.lateMessages[Math.floor(Math.random() * client.config.lateMessages.length)];
 
-                const buttonsRow = new MessageActionRow()
+                const buttonsRow = new ActionRowBuilder<ButtonBuilder>()
                     .addComponents(
-                        new MessageButton()
+                        new ButtonBuilder()
                             .setCustomId(`|REMINDER|${userId}|${AvailabilityLevel.AVAILABLE}`)
                             .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.AVAILABLE])
-                            .setStyle("SUCCESS"),
-                        new MessageButton()
+                            .setStyle(ButtonStyle.Success),
+                        new ButtonBuilder()
                             .setCustomId(`|REMINDER|${userId}|${AvailabilityLevel.MAYBE}`)
                             .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.MAYBE])
-                            .setStyle("SECONDARY"),
-                        new MessageButton()
+                            .setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder()
                             .setCustomId(`|REMINDER|${userId}|${AvailabilityLevel.UNAVAILABLE}`)
                             .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.UNAVAILABLE])
-                            .setStyle("DANGER"),
-                        new MessageButton()
+                            .setStyle(ButtonStyle.Danger),
+                        new ButtonBuilder()
                             .setCustomId(`|REMINDER|${userId}|${EmojiKeys.FIVE_MINUTES}`)
                             .setEmoji(client.config.availabilityEmojis[EmojiKeys.FIVE_MINUTES])
-                            .setStyle("SECONDARY"),
-                        new MessageButton()
+                            .setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder()
                             .setCustomId(`|REMINDER|${userId}|${EmojiKeys.FIFTEEN_MINUTES}`)
                             .setEmoji(client.config.availabilityEmojis[EmojiKeys.FIFTEEN_MINUTES])
-                            .setStyle("SECONDARY"),
+                            .setStyle(ButtonStyle.Secondary),
                     );
 
-                channel.send({ content: msg.replace("{@}", `<@${userId}>`), components: [buttonsRow] });
+                if (channel instanceof TextChannel) {
+                    channel.send({ content: msg.replace("{@}", `<@${userId}>`), components: [buttonsRow] });
+                } else {
+                    console.warn(`Couldn't send reminder message to ${this.channelId}: Not a text channel`);
+                }
             }
         }
 
@@ -161,101 +168,104 @@ class EMessage {
 
     /**
      * Updates all Discord messages associated with this EMessage
-     * @param {Client} client The bot client
-     * @param {boolean} [removeControls] Whether to remove controls from the messages
+     * @param client The bot client
+     * @param removeControls Whether to remove controls from the messages
      */
-    async updateAllMessages(client, removeControls = false) {
+    async updateAllMessages(client: RedEClient, removeControls = false) {
         const messageObj = await this.toMessage(client, removeControls);
-        /**
-         * @type {TextChannel}
-         */
         const channel = await client.channels.fetch(this.channelId);
         for (const messageId of this.messageIds) {
-            channel.messages.edit(messageId, messageObj).catch(err => {
-                console.warn(`Couldn't update message ${messageId}: ${err}`);
-            });
+            if (channel instanceof TextChannel) {
+                channel.messages.edit(messageId, messageObj).catch(err => {
+                    console.warn(`Couldn't update message ${messageId}: ${err}`);
+                });
+            } else {
+                console.warn(`Couldn't update message ${messageId}: Not a text channel`);
+            }
         }
     }
 
     /**
      * Gets a message object from this EMessage
-     * @param {Client} client The bot client
-     * @param {boolean} [removeControls] Whether to remove controls from this message
-     * @returns {object}
+     * @param client The bot client
+     * @param removeControls Whether to remove controls from this message
      */
-    async toMessage(client, removeControls = false) {
+    async toMessage(client: RedEClient, removeControls = false) {
         const user = await getGuildMemberOrUser(client, this.guildId, this.creatorId);
-        const embed = new Embed()
+        const embed = new EmbedBuilder()
             .setTitle("eeee?")
-            .setDescription(`${nicknameOrUsername(user)} propose${this.proposedTime && this.proposedTime >= Date.now() ? "s" : "d"} that we eeee${this.proposedTime ? " " + discordTimestamp(this.proposedTime, "R") : ""}`);
+            .setDescription(`<@${user.id}> propose${this.proposedTime && this.proposedTime >= Date.now() ? "s" : "d"} that we eeee${this.proposedTime ? " " + discordTimestamp(this.proposedTime, TimestampFlags.RELATIVE) : ""}`);
 
-        const currentStatuses = [];
+        const currentStatuses: EStatus[] = [];
         for (const userId in this.statuses) {
-            const name = nicknameOrUsername(await getGuildMemberOrUser(client, this.guildId, userId));
+            const name = `<@${userId}>`;
             const avatar = client.config?.avatoji?.[userId] ?? client.config?.avatoji?.default ?? "❓";
             const s = this.getStatus(userId);
-            currentStatuses.push(s);
-            embed.addField({ name: `${avatar} ${name}`, value: getStatusMessage(client.config, s) });
+            if (s) {
+                currentStatuses.push(s);
+
+                embed.setDescription(`${embed.data.description}\n\n**${avatar} ${name}**\n${getStatusMessage(client.config, s)}`);
+            }
         }
 
-        embed.setColor(getColorFromStatuses(client.config, currentStatuses));
+        embed.setColor(getColorFromStatuses(client.config, currentStatuses)[0]);
         embed.setFooter({ text: "Last Updated" });
         embed.setTimestamp(Date.now());
 
-        const buttonsRow = new MessageActionRow()
+        const buttonsRow = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
-                new MessageButton()
+                new ButtonBuilder()
                     .setCustomId(AvailabilityLevel.AVAILABLE)
                     .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.AVAILABLE])
-                    .setStyle("SUCCESS"),
-                new MessageButton()
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
                     .setCustomId(EmojiKeys.AGREE)
                     .setEmoji(client.config.availabilityEmojis[EmojiKeys.AGREE])
-                    .setStyle("PRIMARY"),
-                new MessageButton()
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
                     .setCustomId(AvailabilityLevel.MAYBE)
                     .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.MAYBE])
-                    .setStyle("SECONDARY"),
-                new MessageButton()
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
                     .setCustomId(AvailabilityLevel.UNAVAILABLE)
                     .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.UNAVAILABLE])
-                    .setStyle("DANGER"),
+                    .setStyle(ButtonStyle.Danger),
             );
 
-        const addTimeButtonsRow = new MessageActionRow()
+        const addTimeButtonsRow = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
-                new MessageButton()
+                new ButtonBuilder()
                     .setCustomId(EmojiKeys.FIVE_MINUTES)
                     .setEmoji(client.config.availabilityEmojis[EmojiKeys.FIVE_MINUTES])
-                    .setStyle("SECONDARY"),
-                new MessageButton()
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
                     .setCustomId(EmojiKeys.FIFTEEN_MINUTES)
                     .setEmoji(client.config.availabilityEmojis[EmojiKeys.FIFTEEN_MINUTES])
-                    .setStyle("SECONDARY"),
-                new MessageButton()
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
                     .setCustomId(EmojiKeys.ONE_HOUR)
                     .setEmoji(client.config.availabilityEmojis[EmojiKeys.ONE_HOUR])
-                    .setStyle("SECONDARY"),
-                new MessageButton()
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
                     .setCustomId(EmojiKeys.TWO_HOURS)
                     .setEmoji(client.config.availabilityEmojis[EmojiKeys.TWO_HOURS])
-                    .setStyle("SECONDARY"),
+                    .setStyle(ButtonStyle.Secondary),
             );
 
-        const hourButtons = new MessageActionRow()
+        const hourButtons = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
-                new MessageButton()
+                new ButtonBuilder()
                     .setCustomId(EmojiKeys.TEN_O_CLOCK)
                     .setEmoji(client.config.availabilityEmojis[EmojiKeys.TEN_O_CLOCK])
-                    .setStyle("SECONDARY"),
-                new MessageButton()
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
                     .setCustomId(EmojiKeys.ELEVEN_O_CLOCK)
                     .setEmoji(client.config.availabilityEmojis[EmojiKeys.ELEVEN_O_CLOCK])
-                    .setStyle("SECONDARY"),
-                new MessageButton()
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
                     .setCustomId(EmojiKeys.TWELVE_O_CLOCK)
                     .setEmoji(client.config.availabilityEmojis[EmojiKeys.TWELVE_O_CLOCK])
-                    .setStyle("SECONDARY"),
+                    .setStyle(ButtonStyle.Secondary),
             );
 
 
@@ -272,5 +282,3 @@ class EMessage {
         return returnValue;
     }
 }
-
-module.exports = EMessage;

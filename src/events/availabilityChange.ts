@@ -1,24 +1,23 @@
-/**
- * @typedef {import('../typedefs').Client} Client
- * @typedef {import('discord.js').ButtonInteraction | import('discord.js').SelectMenuInteraction} Interaction
- */
+import EStatus from "../models/e-status";
+import { AvailabilityLevel, EmojiKeys, TimeUnit, getNearestHourAfter } from "../util";
 
-const EStatus = require("../models/e-status");
-const { AvailabilityLevel, EmojiKeys, TimeUnit, getNearestHourAfter } = require("../util");
+import type { RedEClient } from "../typedefs";
+import type { Interaction } from "discord.js";
 
-module.exports = {
+export default {
     name: "interactionCreate",
     once: false,
     /**
      * Handles a button or select menu interaction
-     * @param {Client} client The bot client
-     * @param {Interaction} interaction The interaction
+     * @param client The bot client
+     * @param interaction The interaction
      */
-    async execute(client, interaction) {
-        if (!(interaction.isButton() || interaction.isSelectMenu())) return;
+    async execute(client: RedEClient, interaction: Interaction) {
+        if (!(interaction.isButton() || interaction.isStringSelectMenu())) return;
         if (interaction.customId.startsWith("|")) return;
+        if (!interaction.inGuild()) return;
 
-        const userId = interaction.member.id;
+        const userId = interaction.member.user.id;
         const emessage = client.state.getEMessage(interaction.guildId, interaction.channelId);
 
         if (!emessage) {
@@ -31,12 +30,17 @@ module.exports = {
         const currentTimeAvailable = currentStatus?.timeAvailable ?? Date.now();
         const tz = client.state.getGuildPreference(interaction.guildId, "defaultTimezone", client.config.defaultTimezone);
 
+        if (!creatorStatus) {
+            interaction.reply({ content: ":x: The current e message is in an invalid state", ephemeral: true });
+            return;
+        }
+
         switch (interaction.customId) {
             case AvailabilityLevel.AVAILABLE:
                 emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE));
                 break;
             case EmojiKeys.AGREE:
-                if (creatorStatus.timeAvailable < Date.now()) {
+                if (creatorStatus.timeAvailable && creatorStatus.timeAvailable < Date.now()) {
                     emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE));
                 } else {
                     emessage.updateStatus(client, userId, new EStatus(userId, creatorStatus.availability, creatorStatus.timeAvailable));

@@ -1,15 +1,11 @@
-const { SlashCommandBuilder } = require("@discordjs/builders");
-const { MessageAttachment } = require("discord.js");
-const fs = require("fs");
-const { EmojiText, formattedDateInTimezone, createChart } = require("../util");
+import fs from "fs";
+import { AttachmentBuilder, SlashCommandBuilder } from "discord.js";
+import { EmojiText, formattedDateInTimezone, createChart } from "../util";
 
-/**
- * @typedef {import('../typedefs').Client} Client
- * @typedef {import('../models/e-message')} EMessage
- * @typedef {import('discord.js').CommandInteraction} CommandInteraction
- */
+import type { RedEClient } from "../typedefs";
+import type { Interaction, ChatInputCommandInteraction } from "discord.js";
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName("elog")
         .setDescription("Lists or views the contents of history logs")
@@ -56,11 +52,14 @@ module.exports = {
 
     /**
      * Executes the command
-     * @param {Client} client The current client
-     * @param {CommandInteraction} interaction The interaction object
+     * @param client The current client
+     * @param interaction The interaction object
      */
-    async execute(client, interaction) {
-        const subcommands = {
+    async execute(client: RedEClient, interaction: Interaction) {
+        if (!interaction.isChatInputCommand()) return;
+        if (!interaction.inGuild()) return;
+
+        const subcommands: Record<string, any> = {
             list: handleList,
             view: handleView,
             chart: handleChart,
@@ -72,10 +71,10 @@ module.exports = {
 
 /**
  * Executes the "list" subcommand
- * @param {Client} client The current client
- * @param {CommandInteraction} interaction The interaction object
+ * @param client The current client
+ * @param interaction The interaction object
  */
-async function handleList(client, interaction) {
+async function handleList(client: RedEClient, interaction: ChatInputCommandInteraction<"cached" | "raw">) {
     const { channelId, guildId } = interaction;
     try {
         const files = fs.readdirSync(`logs/messages/${guildId}/${channelId}`);
@@ -97,7 +96,7 @@ async function handleList(client, interaction) {
         const tz = client.state.getGuildPreference(interaction.guildId, "defaultTimezone", client.config.defaultTimezone);
 
         // eslint-disable-next-line no-inner-declarations
-        function listItem(fileName) {
+        function listItem(fileName: string): string {
             const [timestamp] = fileName.split(".");
             return `:page_facing_up: \`${fileName}\` (${formattedDateInTimezone(Number.parseInt(timestamp), tz, "llll z")})`;
         }
@@ -111,12 +110,12 @@ async function handleList(client, interaction) {
 
 /**
  * Executes the "list" subcommand
- * @param {Client} client The current client
- * @param {CommandInteraction} interaction The interaction object
+ * @param client The current client
+ * @param interaction The interaction object
  */
-async function handleView(client, interaction) {
+async function handleView(client: RedEClient, interaction: ChatInputCommandInteraction<"cached" | "raw">) {
     const { channelId, guildId } = interaction;
-    const filename = interaction.options.getString("file");
+    const filename = interaction.options.getString("file", true);
     if (filename.includes("/")) {
         interaction.reply({ content: `${EmojiText.X_MARK} File name cannot contain \`/\`.`, ephemeral: true });
         return;
@@ -125,19 +124,19 @@ async function handleView(client, interaction) {
         return;
     }
 
-    const json = JSON.parse(fs.readFileSync(`logs/messages/${guildId}/${channelId}/${filename}`));
+    const json = JSON.parse(fs.readFileSync(`logs/messages/${guildId}/${channelId}/${filename}`).toString());
 
-    interaction.reply({ files: [new MessageAttachment(Buffer.from(JSON.stringify(json, null, 4)), filename)], ephemeral: true });
+    interaction.reply({ files: [new AttachmentBuilder(Buffer.from(JSON.stringify(json, null, 4)), { name: filename })], ephemeral: true });
 }
 
 /**
  * Executes the "chart" subcommand
- * @param {Client} client The current client
- * @param {CommandInteraction} interaction The interaction object
+ * @param client The current client
+ * @param interaction The interaction object
  */
-async function handleChart(client, interaction) {
+async function handleChart(client: RedEClient, interaction: ChatInputCommandInteraction<"cached" | "raw">) {
     const { channelId, guildId } = interaction;
-    const filename = interaction.options.getString("file");
+    const filename = interaction.options.getString("file", true);
     if (filename.includes("/")) {
         interaction.reply({ content: `${EmojiText.X_MARK} File name cannot contain \`/\`.`, ephemeral: true });
         return;
@@ -147,7 +146,7 @@ async function handleChart(client, interaction) {
     }
 
     const filePath = `logs/messages/${guildId}/${channelId}/${filename}`;
-    const json = JSON.parse(fs.readFileSync(filePath));
+    const json = JSON.parse(fs.readFileSync(filePath).toString());
 
     const ephemeral = interaction.options.getBoolean("ephemeral") ?? false;
 
