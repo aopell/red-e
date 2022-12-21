@@ -1,26 +1,25 @@
-/**
- * @typedef {import('../typedefs').Client} Client
- * @typedef {import('discord.js').ButtonInteraction} ButtonInteraction
- */
+import EStatus from "../models/e-status";
+import { AvailabilityLevel, EmojiKeys, TimeUnit, getStatusMessage } from "../util";
 
-const EStatus = require("../models/e-status");
-const { AvailabilityLevel, EmojiKeys, TimeUnit, getStatusMessage } = require("../util");
+import type { RedEClient } from "../typedefs";
+import type { Interaction } from "discord.js";
 
-module.exports = {
+export default {
     name: "interactionCreate",
     once: false,
     /**
      * Handles a button interaction for reminder messages
-     * @param {Client} client The bot client
-     * @param {ButtonInteraction} interaction The interaction
+     * @param client The bot client
+     * @param interaction The interaction
      */
-    async execute(client, interaction) {
+    async execute(client: RedEClient, interaction: Interaction) {
         if (!interaction.isButton()) return;
         if (!interaction.customId.startsWith("|REMINDER|")) return;
+        if (!interaction.inGuild()) return;
 
-        const [,, buttonUserId, buttonAction] = interaction.customId.split("|");
+        const [, , buttonUserId, buttonAction] = interaction.customId.split("|");
 
-        const userId = interaction.member.id;
+        const userId = interaction.member.user.id;
 
         if (buttonUserId != userId) {
             interaction.reply({ content: `:x: That button is for <@${buttonUserId}>`, ephemeral: true });
@@ -34,7 +33,7 @@ module.exports = {
             return;
         }
 
-        let newStatus = null;
+        let newStatus: EStatus | null = null;
 
         switch (buttonAction) {
             case AvailabilityLevel.AVAILABLE:

@@ -1,17 +1,15 @@
-/**
- * @typedef {import('../typedefs').Client} Client
- * @typedef {import('discord.js').CommandInteraction} Interaction
- */
+import type { RedEClient } from "../typedefs";
+import type { Interaction } from "discord.js";
 
-module.exports = {
+export default {
     name: "interactionCreate",
     once: false,
     /**
      * Handles a command interaction
-     * @param {Client} client The bot client
-     * @param {Interaction} interaction The interaction
+     * @param client The bot client
+     * @param interaction The interaction
      */
-    async execute(client, interaction) {
+    async execute(client: RedEClient, interaction: Interaction) {
         if (!interaction.isCommand()) return;
 
         const command = client.commands.get(interaction.commandName);

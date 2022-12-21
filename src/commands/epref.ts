@@ -1,14 +1,13 @@
-const { SlashCommandBuilder } = require("@discordjs/builders");
-const { EmojiText, formattedDateInTimezone } = require("../util");
-const moment = require("moment-timezone");
+import { SlashCommandBuilder } from "discord.js";
+import { EmojiText, formattedDateInTimezone } from "../util";
+import moment from "moment-timezone";
+import { defaultTimezone } from "../config.json";
 
-/**
- * @typedef {import('../typedefs').Client} Client
- * @typedef {import('discord.js').CommandInteraction} CommandInteraction
- * @typedef {import('discord.js').CommandInteractionOptionResolver} CommandInteractionOptionResolver
- */
+import type { RedEClient } from "../typedefs";
+import type { Interaction, ChatInputCommandInteraction } from "discord.js";
+import { ChannelType } from "discord.js";
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName("epref")
         .setDescription("Modifies preferences for the server")
@@ -95,21 +94,24 @@ module.exports = {
 
     /**
      * Executes the command
-     * @param {Client} client The current client
-     * @param {CommandInteraction} interaction The interaction object
+     * @param client The current client
+     * @param interaction The interaction object
      */
-    async execute(client, interaction) {
-        const groups = {
+    async execute(client: RedEClient, interaction: Interaction) {
+        if (!interaction.isChatInputCommand()) return;
+        if (!interaction.inGuild()) return;
+
+        const groups: Record<string, any> = {
             role: handleRole,
             voicechannel: handleVoiceChannel,
             timezone: handleTimezone,
         };
 
-        const subcommands = {
+        const subcommands: Record<string, any> = {
         };
 
         if (interaction.options.getSubcommandGroup()) {
-            await groups[interaction.options.getSubcommandGroup()](client, interaction);
+            await groups[interaction.options.getSubcommandGroup(true)](client, interaction);
         } else {
             await subcommands[interaction.options.getSubcommand()](client, interaction);
         }
@@ -118,10 +120,10 @@ module.exports = {
 
 /**
  * Handles the "role" subcommand group
- * @param {Client} client The current client
- * @param {CommandInteraction} interaction The interaction object
+ * @param client The current client
+ * @param interaction The interaction object
  */
-async function handleRole(client, interaction) {
+async function handleRole(client: RedEClient, interaction: ChatInputCommandInteraction<"cached" | "raw">) {
     const availabilityRole = client.state.getGuildPreference(interaction.guildId, "availabilityRole", null);
 
     switch (interaction.options.getSubcommand()) {
@@ -129,8 +131,8 @@ async function handleRole(client, interaction) {
             interaction.reply({ content: availabilityRole ? `The current availabiliteeee role is <@&${availabilityRole}>` : "There is no availabiliteeee role set", ephemeral: true });
             return;
         case "set":
-            client.state.setGuildPreference(interaction.guildId, "availabilityRole", interaction.options.getRole("role").id);
-            interaction.reply({ content: `Availabiliteeee role updated to <@&${interaction.options.getRole("role").id}>`, ephemeral: true });
+            client.state.setGuildPreference(interaction.guildId, "availabilityRole", interaction.options.getRole("role", true).id);
+            interaction.reply({ content: `Availabiliteeee role updated to <@&${interaction.options.getRole("role", true).id}>`, ephemeral: true });
             break;
         case "remove":
             client.state.setGuildPreference(interaction.guildId, "availabilityRole", null);
@@ -144,22 +146,23 @@ async function handleRole(client, interaction) {
 
 /**
  * Handles the "voicechannel" subcommand
- * @param {Client} client The current client
- * @param {CommandInteraction} interaction The interaction object
+ * @param client The current client
+ * @param interaction The interaction object
  */
-async function handleVoiceChannel(client, interaction) {
+async function handleVoiceChannel(client: RedEClient, interaction: ChatInputCommandInteraction<"cached" | "raw">) {
     const trackedChannels = client.state.getGuildPreference(interaction.guildId, "voiceChannels", []);
-    const channel = interaction.options.getChannel("channel");
-    if (channel && !channel.isVoice()) {
+    let channel = interaction.options.getChannel("channel");
+    if (channel && channel.type !== ChannelType.GuildVoice) {
         interaction.reply({ content: `${EmojiText.X_MARK} Please select a voice channel`, ephemeral: true });
         return;
     }
 
     switch (interaction.options.getSubcommand()) {
         case "show":
-            interaction.reply({ content: `Currently tracking ${trackedChannels.length === 0 ? "no channels" : trackedChannels.map(c => `<#${c}>`).join(", ")}`, ephemeral: true });
+            interaction.reply({ content: `Currently tracking ${trackedChannels.length === 0 ? "no channels" : trackedChannels.map((c: any) => `<#${c}>`).join(", ")}`, ephemeral: true });
             return;
         case "track":
+            channel = interaction.options.getChannel("channel", true);
             if (trackedChannels.includes(channel.id)) {
                 interaction.reply({ content: `${EmojiText.X_MARK} That channel is already tracked`, ephemeral: true });
                 return;
@@ -167,6 +170,7 @@ async function handleVoiceChannel(client, interaction) {
             trackedChannels.push(channel.id);
             break;
         case "remove":
+            channel = interaction.options.getChannel("channel", true);
             if (!trackedChannels.includes(channel.id)) {
                 interaction.reply({ content: `${EmojiText.X_MARK} That channel is not being tracked`, ephemeral: true });
                 return;
@@ -179,16 +183,16 @@ async function handleVoiceChannel(client, interaction) {
     }
 
     client.state.setGuildPreference(interaction.guildId, "voiceChannels", trackedChannels);
-    interaction.reply({ content: `${EmojiText.CHECK_TICK} Voice channel tracking updated to track ${trackedChannels.length === 0 ? "no channels" : trackedChannels.map(c => `<#${c}>`).join(", ")}`, ephemeral: true });
+    interaction.reply({ content: `${EmojiText.CHECK_TICK} Voice channel tracking updated to track ${trackedChannels.length === 0 ? "no channels" : trackedChannels.map((c: any) => `<#${c}>`).join(", ")}`, ephemeral: true });
 }
 
 /**
  * Handles the "timezone" subcommand
- * @param {Client} client The current client
- * @param {CommandInteraction} interaction The interaction object
+ * @param client The current client
+ * @param interaction The interaction object
  */
-async function handleTimezone(client, interaction) {
-    let timezone = client.state.getGuildPreference(interaction.guildId, "defaultTimezone", null);
+async function handleTimezone(client: RedEClient, interaction: ChatInputCommandInteraction<"cached" | "raw">) {
+    let timezone = client.state.getGuildPreference(interaction.guildId, "defaultTimezone", null) || defaultTimezone;
     if (interaction.options.getString("tz")) {
         timezone = interaction.options.getString("tz");
         if (!moment.tz.names().includes(timezone)) {
@@ -198,11 +202,11 @@ async function handleTimezone(client, interaction) {
 
     switch (interaction.options.getSubcommand()) {
         case "show":
-            interaction.reply({ content: `Timezone set to \`${timezone}\`. Current time is ${formattedDateInTimezone(Date.now(), timezone, "LLLLs")}.`, ephemeral: true });
+            interaction.reply({ content: `Timezone set to \`${timezone}\`. Current time is ${formattedDateInTimezone(Date.now(), timezone, "LLLL")}.`, ephemeral: true });
             return;
         case "set":
             client.state.setGuildPreference(interaction.guildId, "defaultTimezone", timezone);
-            interaction.reply({ content: `Timezone updated to \`${timezone}\`. Current time is ${formattedDateInTimezone(Date.now(), timezone, "LLLLs")}.`, ephemeral: true });
+            interaction.reply({ content: `Timezone updated to \`${timezone}\`. Current time is ${formattedDateInTimezone(Date.now(), timezone, "LLLL")}.`, ephemeral: true });
             return;
         default:
             interaction.reply({ content: `${EmojiText.X_MARK} Not a valid option`, ephemeral: true });

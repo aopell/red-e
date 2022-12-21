@@ -1,26 +1,25 @@
-const moment = require("moment-timezone");
-const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
-const { MessageAttachment } = require("discord.js");
+import moment from "moment-timezone";
+import { ChartJSNodeCanvas } from "chartjs-node-canvas";
+import { AttachmentBuilder, Snowflake } from "discord.js";
 
-/**
- * @typedef {import('discord.js').GuildMember} GuildMember
- * @typedef {import('discord.js').User} User
- * @typedef {import('./models/e-status')} EStatus
- * @typedef {import('./typedefs').Client} Client
- * @typedef {import('./models/e-message')} EMessage
- */
+import { GuildMember, User } from "discord.js";
+import EStatus from "./models/e-status";
+import type { RedEClient, Config } from "./typedefs";
+import type EMessage from "./models/e-message";
 
-const AvailabilityLevel = Object.freeze({
-    UNKNOWN: "UNKNOWN",
-    UNAVAILABLE: "UNAVAILABLE",
-    MAYBE: "MAYBE",
-    AVAILABLE_LATER: "AVAILABLE_LATER",
-    AVAILABLE: "AVAILABLE",
-    READY: "READY",
-    DONE: "DONE",
-});
+export enum AvailabilityLevel {
+    UNKNOWN = "UNKNOWN",
+    UNAVAILABLE = "UNAVAILABLE",
+    MAYBE = "MAYBE",
+    AVAILABLE_LATER = "AVAILABLE_LATER",
+    AVAILABLE = "AVAILABLE",
+    READY = "READY",
+    DONE = "DONE",
+}
 
-const AvailabilityColors = Object.freeze({
+type AvailabilityColorLevel = Exclude<AvailabilityLevel | "LATE", AvailabilityLevel.AVAILABLE_LATER>;
+
+export const AvailabilityColors: Record<AvailabilityColorLevel, number> = {
     UNKNOWN: 0x7a7a7a,
     UNAVAILABLE: 0xef5a73,
     MAYBE: 0xffac33,
@@ -28,30 +27,29 @@ const AvailabilityColors = Object.freeze({
     READY: 0x2cd261,
     DONE: 0x9241d4,
     LATE: 0xFF7939,
-});
+} as const;
 
-const EmojiKeys = Object.freeze({
-    AGREE: "AGREE",
-    FIVE_MINUTES: "FIVE_MINUTES",
-    FIFTEEN_MINUTES: "FIFTEEN_MINUTES",
-    ONE_HOUR: "ONE_HOUR",
-    TWO_HOURS: "TWO_HOURS",
-    TEN_O_CLOCK: "TEN_O_CLOCK",
-    ELEVEN_O_CLOCK: "ELEVEN_O_CLOCK",
-    TWELVE_O_CLOCK: "TWELVE_O_CLOCK",
-    LATE: "LATE",
-});
+export enum EmojiKeys {
+    AGREE = "AGREE",
+    FIVE_MINUTES = "FIVE_MINUTES",
+    FIFTEEN_MINUTES = "FIFTEEN_MINUTES",
+    ONE_HOUR = "ONE_HOUR",
+    TWO_HOURS = "TWO_HOURS",
+    TEN_O_CLOCK = "TEN_O_CLOCK",
+    ELEVEN_O_CLOCK = "ELEVEN_O_CLOCK",
+    TWELVE_O_CLOCK = "TWELVE_O_CLOCK",
+    LATE = "LATE",
+}
 
 /**
  * Gets the average color of all statuses
- * @param {import('./typedefs').Config} config Bot config
- * @param {EStatus[]} statuses List of statuses
- * @param {bool} [calcAverage] If true, averages all of the colors
- * @param {number} [currentTime] Allows changing the current time
- * @returns {number|number[]}
+ * @param config Bot config
+ * @param statuses List of statuses
+ * @param calcAverage If true, averages all of the colors
+ * @param currentTime Allows changing the current time
  */
-function getColorFromStatuses(config, statuses, calcAverage = true, currentTime = Date.now()) {
-    function getAverageColor(colors) {
+export function getColorFromStatuses(config: Config, statuses: EStatus[], calcAverage = true, currentTime: number = Date.now()): number[] {
+    function getAverageColor(colors: number[]): number {
         let r = 0;
         let g = 0;
         let b = 0;
@@ -69,7 +67,7 @@ function getColorFromStatuses(config, statuses, calcAverage = true, currentTime 
         return (Math.round(Math.sqrt(r)) << 16) + (Math.round(Math.sqrt(g)) << 8) + Math.round(Math.sqrt(b));
     }
 
-    function getWeightedAverageColor(c1, c2, w) {
+    function getWeightedAverageColor(c1: number, c2: number, w: number): number {
         w = Math.min(Math.max(w, 0), 1);
         const c1R = c1 >> 16;
         const c1G = (c1 >> 8) >> 8;
@@ -87,32 +85,32 @@ function getColorFromStatuses(config, statuses, calcAverage = true, currentTime 
 
     const colors = [];
     for (const status of statuses) {
-        if (status.availability === AvailabilityLevel.AVAILABLE_LATER) {
+        if (status.availability === AvailabilityLevel.AVAILABLE_LATER && status.timeAvailable) {
             if (status.timeAvailable < currentTime) {
                 colors.push(AvailabilityColors["LATE"]);
             } else {
                 const weight = (currentTime - status.creationTimestamp) / (status.timeAvailable - status.creationTimestamp);
                 colors.push(getWeightedAverageColor(AvailabilityColors[AvailabilityLevel.MAYBE], AvailabilityColors[AvailabilityLevel.AVAILABLE], weight));
             }
-        } else {
+        } else if (status.availability !== AvailabilityLevel.AVAILABLE_LATER) {
             colors.push(AvailabilityColors[status.availability] ?? AvailabilityColors[AvailabilityLevel.UNKNOWN]);
         }
     }
 
-    return calcAverage ? getAverageColor(colors) : colors;
+    return calcAverage ? [getAverageColor(colors)] : colors;
 }
 
 /**
  * Gets the message for a given status
- * @param {EStatus} status The status
- * @returns {string}
+ * @param status The status
  */
-function getStatusMessage(config, status) {
+export function getStatusMessage(config: Config, status: EStatus): string {
     function getAvailableLaterStatus() {
+        if (!status.timeAvailable) return `${config.availabilityEmojis.UNKNOWN} Unknown`;
         if (status.timeAvailable > Date.now()) {
-            return `${config.availabilityEmojis.AVAILABLE_LATER} Available ${discordTimestamp(status.timeAvailable, "R")}`;
+            return `${config.availabilityEmojis.AVAILABLE_LATER} Available ${discordTimestamp(status.timeAvailable, TimestampFlags.RELATIVE)}`;
         }
-        return `${config.availabilityEmojis.LATE} Late as of ${discordTimestamp(status.timeAvailable, "R")}`;
+        return `${config.availabilityEmojis.LATE} Late as of ${discordTimestamp(status.timeAvailable, TimestampFlags.RELATIVE)}`;
     }
 
     return {
@@ -128,64 +126,62 @@ function getStatusMessage(config, status) {
 
 /**
  * Gets the guild member or user object for the given guildId and userId
- * @returns {Promise<GuildMember|User>}
  */
-async function getGuildMemberOrUser(client, guildId, userId) {
+export async function getGuildMemberOrUser(client: RedEClient, guildId: Snowflake, userId: Snowflake): Promise<GuildMember | User> {
     const guild = await client.guilds.fetch(guildId);
-    let user = await guild.members.fetch(userId);
+    const user = await guild.members.fetch(userId);
     if (!user) {
-        user = client.users.fetch(userId);
+        return await client.users.fetch(userId);
     }
     return user;
 }
 
 /**
  * Gets nickname or username for a given user or guild member object
- * @param {GuildMember|User} user User or Guild Member
- * @returns {string}
+ * @param user User or Guild Member
  */
-function nicknameOrUsername(user) {
-    return user?.nickname ?? user?.user?.username ?? user?.username;
+export function nicknameOrUsername(user: GuildMember | User): string {
+    if (user instanceof GuildMember) {
+        return user.nickname ?? user.user.username;
+    }
+    return user.username;
 }
 
 /**
  * Converts a Unix timestamp to a moment object in a specified timezone
- * @param {number} unixTimestamp Unix timestamp
- * @param {string} timezone Unix timezone string
- * @returns {moment.Moment}
+ * @param unixTimestamp Unix timestamp
+ * @param timezone Unix timezone string
  */
-function dateInTimezone(unixTimestamp, timezone) {
+export function dateInTimezone(unixTimestamp: number, timezone: string): moment.Moment {
     return moment(unixTimestamp).tz(timezone);
 }
 
 /**
  * Formats a Unix timestamp as a string in a specified timezone
- * @param {number} unixTimestamp Unix timestamp
- * @param {string} timezone Unix timezone string
- * @param {string} format String format to use
- * @returns {string}
+ * @param unixTimestamp Unix timestamp
+ * @param timezone Unix timezone string
+ * @param format String format to use
  */
-function formattedDateInTimezone(unixTimestamp, timezone, format) {
+export function formattedDateInTimezone(unixTimestamp: number, timezone: string, format: string): string {
     return dateInTimezone(unixTimestamp, timezone).format(format);
 }
 
 /**
  * Converts a unix timestamp and format flag into a Discord timestamp
- * @param {number} unixTimestamp Unix timestamp
- * @param {string} formatFlag One of `TimestampFlags`
- * @returns {string}
+ * @param unixTimestamp Unix timestamp
+ * @param formatFlag One of `TimestampFlags`
  */
-function discordTimestamp(unixTimestamp, formatFlag) {
+export function discordTimestamp(unixTimestamp: number, formatFlag: TimestampFlags) {
     return `<t:${Math.floor(unixTimestamp / 1000)}:${formatFlag}>`;
 }
 
 /**
  * Finds the nearest `hour` o'clock after the current time in the given timezone.
- * @param {number} hour hour to find, between 0 and 23 inclusive
- * @param {string} timezone Unix timezone in which to find the hour
- * @returns {number} Unix timestamp of nearest `hour` o'clock after the current time
+ * @param hour hour to find, between 0 and 23 inclusive
+ * @param timezone Unix timezone in which to find the hour
+ * @returns Unix timestamp of nearest `hour` o'clock after the current time
  */
-function getNearestHourAfter(hour, timezone) {
+export function getNearestHourAfter(hour: number, timezone: string): number {
     const hourTime = moment.tz(`${hour}:00`, [moment.ISO_8601, "HH:mm"], timezone).valueOf();
     if (hourTime > Date.now() + (24 * TimeUnit.HOURS)) {
         return hourTime - (24 * TimeUnit.HOURS);
@@ -195,35 +191,34 @@ function getNearestHourAfter(hour, timezone) {
     return hourTime;
 }
 
-const TimestampFlags = Object.freeze({
-    SHORT_TIME: "t",
-    LONG_TIME: "T",
-    SHORT_DATE: "d",
-    LONG_DATE: "D",
-    SHORT_DATE_TIME: "f",
-    LONG_DATE_TIME: "F",
-    RELATIVE: "R",
-});
+export enum TimestampFlags {
+    SHORT_TIME = "t",
+    LONG_TIME = "T",
+    SHORT_DATE = "d",
+    LONG_DATE = "D",
+    SHORT_DATE_TIME = "f",
+    LONG_DATE_TIME = "F",
+    RELATIVE = "R",
+}
 
-const TimeUnit = Object.freeze({
-    SECONDS: 1000,
-    MINUTES: 60 * 1000,
-    HOURS: 60 * 60 * 1000,
-    DAYS: 24 * 60 * 60 * 1000,
-});
+export enum TimeUnit {
+    SECONDS = 1000,
+    MINUTES = 60 * 1000,
+    HOURS = 60 * 60 * 1000,
+    DAYS = 24 * 60 * 60 * 1000,
+}
 
-const EmojiText = Object.freeze({
-    CHECK_TICK: "<a:check_tick:747247710373019738>",
-    X_MARK: ":x:",
-});
+export enum EmojiText {
+    CHECK_TICK = "<a:check_tick:747247710373019738>",
+    X_MARK = ":x:",
+}
 
 /**
  * Creates a chart representing the statuses in this EMessage
- * @param {EMessage} emessage The message to turn into a chart
- * @param {Client} client The bot client
- * @returns {MessageAttachment}
+ * @param emessage The message to turn into a chart
+ * @param client The bot client
  */
-async function createChart(emessage, client) {
+export async function createChart(emessage: EMessage, client: RedEClient): Promise<AttachmentBuilder> {
     const userIds = Object.keys(emessage.statuses);
     const tz = client.state.getGuildPreference(emessage.guildId, "defaultTimezone", client.config.defaultTimezone);
     const labels = [];
@@ -231,13 +226,12 @@ async function createChart(emessage, client) {
         labels.push(nicknameOrUsername(await getGuildMemberOrUser(client, emessage.guildId, userId)));
     }
 
-    const MSECS_PER_MIN = 60000;
+    const MSECS_PER_MIN: number = TimeUnit.MINUTES;
     const startingTime = new Date(emessage.statusLog[0].creationTimestamp);
     startingTime.setMilliseconds(0);
     startingTime.setSeconds(0);
     const datasets = [];
-    /** @type {Map<string, EStatus>} */
-    const lastStatus = Object.fromEntries(userIds.map(u => [u, { userId: u, availability: AvailabilityLevel.UNKNOWN, creationTimestamp: startingTime.valueOf() }]));
+    const lastStatus = <Record<Snowflake, EStatus>>Object.fromEntries(userIds.map(u => [u, { userId: u, availability: AvailabilityLevel.UNKNOWN, creationTimestamp: startingTime.valueOf() }]));
     lastStatus[emessage.creatorId] = emessage.statusLog[0];
     let nextIndex = 0;
 
@@ -251,7 +245,7 @@ async function createChart(emessage, client) {
         const dataset = {
             label: formattedDateInTimezone(timestep, tz, "LT"),
             data: userIds.map(() => 1),
-            backgroundColor: getColorFromStatuses(client.config, userIds.map(u => lastStatus[u]), false, timestep, true).map(n => "#" + n.toString(16)),
+            backgroundColor: getColorFromStatuses(client.config, userIds.map(u => lastStatus[u]), false, timestep).map(n => "#" + n.toString(16)),
             borderWidth: 0,
         };
 
@@ -274,7 +268,7 @@ async function createChart(emessage, client) {
                 xAxes: [{
                     stacked: true,
                     ticks: {
-                        callback: function (value, index, values) {
+                        callback: function (value: number, index: any, values: any): string {
                             return formattedDateInTimezone(startingTime.valueOf() + MSECS_PER_MIN * value, tz, "LT");
                         },
                         fontSize: 20,
@@ -299,7 +293,7 @@ async function createChart(emessage, client) {
     const canvas = new ChartJSNodeCanvas({
         width, height, plugins: {
             modern: [{
-                beforeDraw: chart => {
+                beforeDraw: (chart: any) => {
                     const ctx = chart.ctx;
                     ctx.save();
                     ctx.fillStyle = "#ffffff";
@@ -310,24 +304,11 @@ async function createChart(emessage, client) {
         },
     });
 
-    const attachment = new MessageAttachment(await canvas.renderToBuffer(chartOptions), "echart.png");
-    return attachment;
+    return new AttachmentBuilder(
+        await canvas.renderToBuffer(chartOptions),
+        {
+            name: "echart.png",
+            description: "A chart showing who was available over time",
+        },
+    );
 }
-
-module.exports = {
-    AvailabilityLevel,
-    AvailabilityColors,
-    EmojiKeys,
-    TimestampFlags,
-    TimeUnit,
-    EmojiText,
-    getColorFromStatuses,
-    getStatusMessage,
-    getGuildMemberOrUser,
-    nicknameOrUsername,
-    dateInTimezone,
-    formattedDateInTimezone,
-    discordTimestamp,
-    getNearestHourAfter,
-    createChart,
-};

@@ -1,15 +1,11 @@
-/**
- * @typedef {import('./typedefs').Client} Client
- * @typedef {import('discord.js').CommandInteraction} Interaction
- */
-
-const { TimeUnit } = require("./util");
+import type { RedEClient } from "./typedefs";
+import { TimeUnit } from "./util";
 
 /**
  * Updates the message
- * @param {Client} client The bot client
+ * @param client The bot client
  */
-async function updateMessages(client) {
+export async function updateMessages(client: RedEClient) {
     for (const emessage of client.state.getAllEMessages()) {
         emessage.updateAllMessages(client);
         emessage.pingLateUsers(client);
@@ -19,5 +15,3 @@ async function updateMessages(client) {
         }
     }
 }
-
-module.exports = { updateMessages };

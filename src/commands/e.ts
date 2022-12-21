@@ -1,14 +1,12 @@
-const { SlashCommandBuilder } = require("@discordjs/builders");
-const EMessage = require("../models/e-message");
-const EStatus = require("../models/e-status");
-const { AvailabilityLevel, EmojiKeys, TimeUnit, getNearestHourAfter, EmojiText, createChart } = require("../util");
+import { SlashCommandBuilder } from "discord.js";
+import EMessage from "../models/e-message";
+import EStatus from "../models/e-status";
+import { AvailabilityLevel, EmojiKeys, TimeUnit, getNearestHourAfter, EmojiText, createChart } from "../util";
 
-/**
- * @typedef {import('../typedefs').Client} Client
- * @typedef {import('discord.js').CommandInteraction} CommandInteraction
- */
+import type { RedEClient } from "../typedefs";
+import type { Interaction, ChatInputCommandInteraction } from "discord.js";
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName("e")
         .setDescription("Creates or views an e status message")
@@ -21,17 +19,17 @@ module.exports = {
                         .setName("when")
                         .setDescription("Your availability")
                         .setRequired(true)
-                        .addChoices([
-                            ["now", AvailabilityLevel.AVAILABLE],
-                            ["in 5 minutes", EmojiKeys.FIVE_MINUTES],
-                            ["in 15 minutes", EmojiKeys.FIFTEEN_MINUTES],
-                            ["in 1 hour", EmojiKeys.ONE_HOUR],
-                            ["in 2 hours", EmojiKeys.TWO_HOURS],
-                            ["at 10:00 PM", EmojiKeys.TEN_O_CLOCK],
-                            ["at 11:00 PM", EmojiKeys.ELEVEN_O_CLOCK],
-                            ["at midnight", EmojiKeys.TWELVE_O_CLOCK],
-                            ["at some point", AvailabilityLevel.UNKNOWN],
-                        ]),
+                        .addChoices(
+                            { name: "now", value: AvailabilityLevel.AVAILABLE },
+                            { name: "in 5 minutes", value: EmojiKeys.FIVE_MINUTES },
+                            { name: "in 15 minutes", value: EmojiKeys.FIFTEEN_MINUTES },
+                            { name: "in 1 hour", value: EmojiKeys.ONE_HOUR },
+                            { name: "in 2 hours", value: EmojiKeys.TWO_HOURS },
+                            { name: "at 10:00 PM", value: EmojiKeys.TEN_O_CLOCK },
+                            { name: "at 11:00 PM", value: EmojiKeys.ELEVEN_O_CLOCK },
+                            { name: "at midnight", value: EmojiKeys.TWELVE_O_CLOCK },
+                            { name: "at some point", value: AvailabilityLevel.UNKNOWN },
+                        ),
                 ),
         )
         .addSubcommand(subcommand =>
@@ -56,14 +54,11 @@ module.exports = {
                 ),
         ),
 
+    async execute(client: RedEClient, interaction: Interaction) {
+        if (!interaction.isChatInputCommand()) return;
+        if (!interaction.inGuild()) return;
 
-    /**
-     * Executes the command
-     * @param {Client} client The current client
-     * @param {CommandInteraction} interaction The interaction object
-     */
-    async execute(client, interaction) {
-        const subcommands = {
+        const subcommands: Record<string, any> = {
             show: handleShow,
             start: handleStart,
             delete: handleDelete,
@@ -76,10 +71,10 @@ module.exports = {
 
 /**
  * Executes the "show" subcommand
- * @param {Client} client The current client
- * @param {CommandInteraction} interaction The interaction object
+ * @param client The current client
+ * @param interaction The interaction object
  */
-async function handleShow(client, interaction) {
+async function handleShow(client: RedEClient, interaction: ChatInputCommandInteraction<"cached" | "raw">) {
     const { channelId, guildId } = interaction;
     const emessage = client.state.getEMessage(guildId, channelId);
     if (!emessage) {
@@ -96,10 +91,10 @@ async function handleShow(client, interaction) {
 
 /**
  * Executes the "start" subcommand
- * @param {Client} client The current client
- * @param {CommandInteraction} interaction The interaction object
+ * @param client The current client
+ * @param interaction The interaction object
  */
-async function handleStart(client, interaction) {
+async function handleStart(client: RedEClient, interaction: ChatInputCommandInteraction<"cached" | "raw">) {
     const { channelId, guildId, user, options } = interaction;
 
     let emessage = client.state.getEMessage(guildId, channelId);
@@ -110,7 +105,7 @@ async function handleStart(client, interaction) {
 
     const tz = client.state.getGuildPreference(interaction.guildId, "defaultTimezone", client.config.defaultTimezone);
 
-    const estatuses = {
+    const estatuses: Record<string, EStatus> = {
         [AvailabilityLevel.AVAILABLE]: new EStatus(user.id, AvailabilityLevel.AVAILABLE),
         [EmojiKeys.FIVE_MINUTES]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, Date.now() + (5 * TimeUnit.MINUTES)),
         [EmojiKeys.FIFTEEN_MINUTES]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, Date.now() + (15 * TimeUnit.MINUTES)),
@@ -122,7 +117,7 @@ async function handleStart(client, interaction) {
         [AvailabilityLevel.UNKNOWN]: new EStatus(user.id, AvailabilityLevel.UNKNOWN),
     };
 
-    emessage = new EMessage(user.id, channelId, guildId, estatuses[options.get("when").value]);
+    emessage = new EMessage(user.id, channelId, guildId, estatuses[options.getString("when", true)]);
     client.state.setEMessage(guildId, channelId, emessage);
 
     const message = await interaction.reply({ ...(await emessage.toMessage(client)), fetchReply: true });
@@ -134,10 +129,10 @@ async function handleStart(client, interaction) {
 
 /**
  * Executes the "delete" subcommand
- * @param {Client} client The current client
- * @param {CommandInteraction} interaction The interaction object
+ * @param client The current client
+ * @param interaction The interaction object
  */
-async function handleDelete(client, interaction) {
+async function handleDelete(client: RedEClient, interaction: ChatInputCommandInteraction<"cached" | "raw">) {
     const { channelId, guildId } = interaction;
     const emessage = client.state.getEMessage(guildId, channelId);
     if (!emessage) {
@@ -152,10 +147,10 @@ async function handleDelete(client, interaction) {
 
 /**
  * Executes the "chart" subcommand
- * @param {Client} client The current client
- * @param {CommandInteraction} interaction The interaction object
+ * @param client The current client
+ * @param interaction The interaction object
  */
-async function handleChart(client, interaction) {
+async function handleChart(client: RedEClient, interaction: ChatInputCommandInteraction<"cached" | "raw">) {
     const { channelId, guildId } = interaction;
     const emessage = client.state.getEMessage(guildId, channelId);
     if (!emessage) {
