@@ -42,7 +42,7 @@ export async function deleteAllGuildCommands(client: RedEClient, guildId: Snowfl
     console.log(`Successfully deleted application guild commands for ${guildId}.`);
 }
 
-export async function deleteAllGlobalCommands(client: RedEClient, guildId: Snowflake) {
+export async function deleteAllGlobalCommands(client: RedEClient) {
     if (!client.user) throw "Client is in invalid state for deleting commands";
 
     const result = await rest.delete(

@@ -1,5 +1,5 @@
 import type { Client, Collection, Snowflake, SlashCommandBuilder, Interaction } from "discord.js";
-import type ClientState from "./botstate";
+import type DatabaseConnection from "./helpers/database-connection-helper";
 import type { EmojiKeys, AvailabilityLevel } from "./util";
 
 export type AnyEmoji = AvailabilityLevel | EmojiKeys;
@@ -21,4 +21,4 @@ export type CommandHandler = {
     execute: (client: RedEClient, interaction: Interaction) => Promise<void>
 }
 
-export type RedEClient = Client & { config: Config, state: ClientState, commands: Collection<string, CommandHandler> };
+export type RedEClient = Client & { config: Config, database: DatabaseConnection, commands: Collection<string, CommandHandler> };
