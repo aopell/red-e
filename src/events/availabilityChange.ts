@@ -1,5 +1,5 @@
 import EStatus from "../models/e-status";
-import { AvailabilityLevel, EmojiKeys, TimeUnit, getNearestHourAfter } from "../util";
+import { AvailabilityLevel, EmojiKeys, TimeExtensions, TimeUnit, getNearestHourAfter } from "../util";
 
 import type { RedEClient } from "../typedefs";
 import type { Interaction } from "discord.js";
@@ -58,11 +58,20 @@ export default {
             case EmojiKeys.FIFTEEN_MINUTES:
                 emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (15 * TimeUnit.MINUTES)));
                 break;
+            case EmojiKeys.THIRTY_MINUTES:
+                emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (30 * TimeUnit.MINUTES)));
+                break;
             case EmojiKeys.ONE_HOUR:
                 emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (1 * TimeUnit.HOURS)));
                 break;
-            case EmojiKeys.TWO_HOURS:
+            case TimeExtensions.TWO_HOURS:
                 emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, currentTimeAvailable + (2 * TimeUnit.HOURS)));
+                break;
+            case EmojiKeys.EIGHT_O_CLOCK:
+                emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(20, tz)));
+                break;
+            case EmojiKeys.NINE_O_CLOCK:
+                emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(21, tz)));
                 break;
             case EmojiKeys.TEN_O_CLOCK:
                 emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(22, tz)));
@@ -70,7 +79,7 @@ export default {
             case EmojiKeys.ELEVEN_O_CLOCK:
                 emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(23, tz)));
                 break;
-            case EmojiKeys.TWELVE_O_CLOCK:
+            case TimeExtensions.TWELVE_O_CLOCK:
                 emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(0, tz)));
                 break;
             default:

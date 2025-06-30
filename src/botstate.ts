@@ -102,20 +102,6 @@ export default class ClientState {
     }
 
     /**
-     * Gets the specified preference for all guilds
-     * @param pref The preference to fetch
-     * @param fallback A fallback value if the preference doesn't exist
-     * @returns Map of guild ID to the preference value
-     */
-    getAllGuildsPreference(pref: keyof GuildPreferences, fallback: any = undefined): { [key: Snowflake]: any } {
-        const allPrefs: Record<Snowflake, any> = {};
-        for (const guildId in this.GuildPreferences) {
-            allPrefs[guildId] = this.getGuildPreference(guildId, pref, fallback);
-        }
-        return allPrefs;
-    }
-
-    /**
      * Sets the preference for a guild, and saves state
      * @param guildId The guild for which to set a preference
      * @param pref The preference to set

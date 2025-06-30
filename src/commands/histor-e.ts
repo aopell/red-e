@@ -7,7 +7,7 @@ import type { Interaction, ChatInputCommandInteraction } from "discord.js";
 
 export default {
     data: new SlashCommandBuilder()
-        .setName("elog")
+        .setName("histor-e")
         .setDescription("Lists or views the contents of history logs")
         .addSubcommand(subcommand =>
             subcommand

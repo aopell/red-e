@@ -9,7 +9,7 @@ import { ChannelType } from "discord.js";
 
 export default {
     data: new SlashCommandBuilder()
-        .setName("epref")
+        .setName("set-e")
         .setDescription("Modifies preferences for the server")
         .addSubcommandGroup(group =>
             group

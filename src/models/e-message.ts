@@ -243,17 +243,25 @@ export default class EMessage {
                     .setEmoji(client.config.availabilityEmojis[EmojiKeys.FIFTEEN_MINUTES])
                     .setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder()
-                    .setCustomId(EmojiKeys.ONE_HOUR)
-                    .setEmoji(client.config.availabilityEmojis[EmojiKeys.ONE_HOUR])
+                    .setCustomId(EmojiKeys.THIRTY_MINUTES)
+                    .setEmoji(client.config.availabilityEmojis[EmojiKeys.THIRTY_MINUTES])
                     .setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder()
-                    .setCustomId(EmojiKeys.TWO_HOURS)
-                    .setEmoji(client.config.availabilityEmojis[EmojiKeys.TWO_HOURS])
+                    .setCustomId(EmojiKeys.ONE_HOUR)
+                    .setEmoji(client.config.availabilityEmojis[EmojiKeys.ONE_HOUR])
                     .setStyle(ButtonStyle.Secondary),
             );
 
         const hourButtons = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(EmojiKeys.EIGHT_O_CLOCK)
+                    .setEmoji(client.config.availabilityEmojis[EmojiKeys.EIGHT_O_CLOCK])
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId(EmojiKeys.NINE_O_CLOCK)
+                    .setEmoji(client.config.availabilityEmojis[EmojiKeys.NINE_O_CLOCK])
+                    .setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder()
                     .setCustomId(EmojiKeys.TEN_O_CLOCK)
                     .setEmoji(client.config.availabilityEmojis[EmojiKeys.TEN_O_CLOCK])
@@ -261,10 +269,6 @@ export default class EMessage {
                 new ButtonBuilder()
                     .setCustomId(EmojiKeys.ELEVEN_O_CLOCK)
                     .setEmoji(client.config.availabilityEmojis[EmojiKeys.ELEVEN_O_CLOCK])
-                    .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                    .setCustomId(EmojiKeys.TWELVE_O_CLOCK)
-                    .setEmoji(client.config.availabilityEmojis[EmojiKeys.TWELVE_O_CLOCK])
                     .setStyle(ButtonStyle.Secondary),
             );
 

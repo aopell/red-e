@@ -1,14 +1,14 @@
 import { SlashCommandBuilder } from "discord.js";
 import EMessage from "../models/e-message";
 import EStatus from "../models/e-status";
-import { AvailabilityLevel, EmojiKeys, TimeUnit, getNearestHourAfter, EmojiText, createChart } from "../util";
+import { AvailabilityLevel, EmojiKeys, TimeUnit, getNearestHourAfter, EmojiText, createChart, TimeExtensions } from "../util";
 
 import type { RedEClient } from "../typedefs";
 import type { Interaction, ChatInputCommandInteraction } from "discord.js";
 
 export default {
     data: new SlashCommandBuilder()
-        .setName("e")
+        .setName("red-e")
         .setDescription("Creates or views an e status message")
         .addSubcommand(subcommand =>
             subcommand
@@ -23,11 +23,14 @@ export default {
                             { name: "now", value: AvailabilityLevel.AVAILABLE },
                             { name: "in 5 minutes", value: EmojiKeys.FIVE_MINUTES },
                             { name: "in 15 minutes", value: EmojiKeys.FIFTEEN_MINUTES },
+                            { name: "in 30 minutes", value: EmojiKeys.THIRTY_MINUTES },
                             { name: "in 1 hour", value: EmojiKeys.ONE_HOUR },
-                            { name: "in 2 hours", value: EmojiKeys.TWO_HOURS },
+                            { name: "in 2 hours", value: TimeExtensions.TWO_HOURS },
+                            { name: "at 8:00 PM", value: EmojiKeys.EIGHT_O_CLOCK },
+                            { name: "at 9:00 PM", value: EmojiKeys.NINE_O_CLOCK },
                             { name: "at 10:00 PM", value: EmojiKeys.TEN_O_CLOCK },
                             { name: "at 11:00 PM", value: EmojiKeys.ELEVEN_O_CLOCK },
-                            { name: "at midnight", value: EmojiKeys.TWELVE_O_CLOCK },
+                            { name: "at midnight", value: TimeExtensions.TWELVE_O_CLOCK },
                             { name: "at some point", value: AvailabilityLevel.UNKNOWN },
                         ),
                 ),
@@ -109,11 +112,14 @@ async function handleStart(client: RedEClient, interaction: ChatInputCommandInte
         [AvailabilityLevel.AVAILABLE]: new EStatus(user.id, AvailabilityLevel.AVAILABLE),
         [EmojiKeys.FIVE_MINUTES]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, Date.now() + (5 * TimeUnit.MINUTES)),
         [EmojiKeys.FIFTEEN_MINUTES]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, Date.now() + (15 * TimeUnit.MINUTES)),
+        [EmojiKeys.THIRTY_MINUTES]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, Date.now() + (30 * TimeUnit.MINUTES)),
         [EmojiKeys.ONE_HOUR]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, Date.now() + (1 * TimeUnit.HOURS)),
-        [EmojiKeys.TWO_HOURS]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, Date.now() + (2 * TimeUnit.HOURS)),
+        [TimeExtensions.TWO_HOURS]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, Date.now() + (2 * TimeUnit.HOURS)),
+        [EmojiKeys.EIGHT_O_CLOCK]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(20, tz)),
+        [EmojiKeys.NINE_O_CLOCK]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(21, tz)),
         [EmojiKeys.TEN_O_CLOCK]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(22, tz)),
         [EmojiKeys.ELEVEN_O_CLOCK]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(23, tz)),
-        [EmojiKeys.TWELVE_O_CLOCK]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(0, tz)),
+        [TimeExtensions.TWELVE_O_CLOCK]: new EStatus(user.id, AvailabilityLevel.AVAILABLE_LATER, getNearestHourAfter(0, tz)),
         [AvailabilityLevel.UNKNOWN]: new EStatus(user.id, AvailabilityLevel.UNKNOWN),
     };
 

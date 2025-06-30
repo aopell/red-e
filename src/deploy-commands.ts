@@ -35,7 +35,7 @@ export async function deployGlobalCommands(client: RedEClient) {
 export async function deleteAllGuildCommands(client: RedEClient, guildId: Snowflake) {
     if (!client.user) throw "Client is in invalid state for deleting commands";
 
-    const result = await rest.delete(
+    const result = await rest.put(
         Routes.applicationGuildCommands(client.user.id, guildId), { body: [] },
     );
 
@@ -45,7 +45,7 @@ export async function deleteAllGuildCommands(client: RedEClient, guildId: Snowfl
 export async function deleteAllGlobalCommands(client: RedEClient, guildId: Snowflake) {
     if (!client.user) throw "Client is in invalid state for deleting commands";
 
-    const result = await rest.delete(
+    const result = await rest.put(
         Routes.applicationCommands(client.user.id), { body: [] },
     );
 
