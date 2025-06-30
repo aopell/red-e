@@ -194,9 +194,10 @@ export default class EMessage {
     async toMessage(client: RedEClient, removeControls = false) {
         const user = await getGuildMemberOrUser(client, this.guildId, this.creatorId);
         const ownerAvatar = client.config?.avatoji?.[this.creatorId] ?? client.config?.avatoji?.default ?? "❓";
+
         const embed = new EmbedBuilder()
             .setTitle("Are you red-e?")
-            .setDescription(`${ownerAvatar} <@${user.id}> is red-e${this.proposedTime ? " " + discordTimestamp(this.proposedTime, TimestampFlags.RELATIVE) : ""}`);
+            .setDescription(`${ownerAvatar} <@${user.id}> proposed we be red-e${this.proposedTime ? " " + discordTimestamp(this.proposedTime, TimestampFlags.RELATIVE) : ""}`);
 
         const currentStatuses: EStatus[] = [];
         for (const userId in this.statuses) {
