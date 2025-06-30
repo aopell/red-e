@@ -8,12 +8,12 @@ export default {
     async execute(client: RedEClient) {
         console.log(`Ready! Logged in as ${client.user?.tag}`);
 
-        await deleteAllGuildCommands(client, "136711405356318721");
+        // await deleteAllGuildCommands(client, "136711405356318721");
         // await deployGuildCommands(client, "136711405356318721");
 
-        // await deployGlobalCommands(client);
+        await deployGlobalCommands(client);
 
-        // updateMessages(client);
-        // setInterval(() => updateMessages(client), 60000);
+        updateMessages(client);
+        setInterval(() => updateMessages(client), 60000);
     },
 };

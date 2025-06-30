@@ -138,14 +138,6 @@ export default class EMessage {
                             .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.AVAILABLE])
                             .setStyle(ButtonStyle.Success),
                         new ButtonBuilder()
-                            .setCustomId(`|REMINDER|${userId}|${AvailabilityLevel.MAYBE}`)
-                            .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.MAYBE])
-                            .setStyle(ButtonStyle.Secondary),
-                        new ButtonBuilder()
-                            .setCustomId(`|REMINDER|${userId}|${AvailabilityLevel.UNAVAILABLE}`)
-                            .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.UNAVAILABLE])
-                            .setStyle(ButtonStyle.Danger),
-                        new ButtonBuilder()
                             .setCustomId(`|REMINDER|${userId}|${EmojiKeys.FIVE_MINUTES}`)
                             .setEmoji(client.config.availabilityEmojis[EmojiKeys.FIVE_MINUTES])
                             .setStyle(ButtonStyle.Secondary),
@@ -153,10 +145,19 @@ export default class EMessage {
                             .setCustomId(`|REMINDER|${userId}|${EmojiKeys.FIFTEEN_MINUTES}`)
                             .setEmoji(client.config.availabilityEmojis[EmojiKeys.FIFTEEN_MINUTES])
                             .setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder()
+                            .setCustomId(`|REMINDER|${userId}|${AvailabilityLevel.MAYBE}`)
+                            .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.MAYBE])
+                            .setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder()
+                            .setCustomId(`|REMINDER|${userId}|${AvailabilityLevel.UNAVAILABLE}`)
+                            .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.UNAVAILABLE])
+                            .setStyle(ButtonStyle.Danger),
                     );
 
                 if (channel instanceof TextChannel) {
-                    channel.send({ content: msg.replace("{@}", `<@${userId}>`), components: [buttonsRow] });
+                    const avatar = client.config?.avatoji?.[userId] ?? client.config?.avatoji?.default ?? "❓";
+                    channel.send({ content: msg.replace("{@}", `${avatar} <@${userId}>`), components: [buttonsRow] });
                 } else {
                     console.warn(`Couldn't send reminder message to ${this.channelId}: Not a text channel`);
                 }
@@ -192,9 +193,10 @@ export default class EMessage {
      */
     async toMessage(client: RedEClient, removeControls = false) {
         const user = await getGuildMemberOrUser(client, this.guildId, this.creatorId);
+        const ownerAvatar = client.config?.avatoji?.[this.creatorId] ?? client.config?.avatoji?.default ?? "❓";
         const embed = new EmbedBuilder()
-            .setTitle("eeee?")
-            .setDescription(`<@${user.id}> propose${this.proposedTime && this.proposedTime >= Date.now() ? "s" : "d"} that we eeee${this.proposedTime ? " " + discordTimestamp(this.proposedTime, TimestampFlags.RELATIVE) : ""}`);
+            .setTitle("Are you red-e?")
+            .setDescription(`${ownerAvatar} <@${user.id}> is red-e${this.proposedTime ? " " + discordTimestamp(this.proposedTime, TimestampFlags.RELATIVE) : ""}`);
 
         const currentStatuses: EStatus[] = [];
         for (const userId in this.statuses) {
@@ -221,7 +223,7 @@ export default class EMessage {
                 new ButtonBuilder()
                     .setCustomId(EmojiKeys.AGREE)
                     .setEmoji(client.config.availabilityEmojis[EmojiKeys.AGREE])
-                    .setStyle(ButtonStyle.Primary),
+                    .setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder()
                     .setCustomId(AvailabilityLevel.MAYBE)
                     .setEmoji(client.config.availabilityEmojis[AvailabilityLevel.MAYBE])

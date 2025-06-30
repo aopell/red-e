@@ -40,6 +40,7 @@ export enum EmojiKeys {
     TEN_O_CLOCK = "TEN_O_CLOCK",
     ELEVEN_O_CLOCK = "ELEVEN_O_CLOCK",
     LATE = "LATE",
+    AVAILABLE_LATER_ALT = "AVAILABLE_LATER_ALT",
 }
 
 export enum TimeExtensions {
@@ -114,19 +115,19 @@ export function getStatusMessage(config: Config, status: EStatus): string {
     function getAvailableLaterStatus() {
         if (!status.timeAvailable) return `${config.availabilityEmojis.UNKNOWN} Unknown`;
         if (status.timeAvailable > Date.now()) {
-            return `${config.availabilityEmojis.AVAILABLE_LATER} Available ${discordTimestamp(status.timeAvailable, TimestampFlags.RELATIVE)}`;
+            return `${new Date().getMinutes() % 2 == 0 ? config.availabilityEmojis.AVAILABLE_LATER : config.availabilityEmojis.AVAILABLE_LATER_ALT} Available ${discordTimestamp(status.timeAvailable, TimestampFlags.RELATIVE)}`;
         }
         return `${config.availabilityEmojis.LATE} Late as of ${discordTimestamp(status.timeAvailable, TimestampFlags.RELATIVE)}`;
     }
 
     return {
         UNKNOWN: `${config.availabilityEmojis.UNKNOWN} Unknown`,
-        UNAVAILABLE: `${config.availabilityEmojis.UNAVAILABLE} Unavailable`,
-        MAYBE: `${config.availabilityEmojis.MAYBE} Maybe Later`,
+        UNAVAILABLE: `${config.availabilityEmojis.UNAVAILABLE} No availabilit-e`,
+        MAYBE: `${config.availabilityEmojis.MAYBE} Mayb-e Later`,
         AVAILABLE_LATER: getAvailableLaterStatus(),
-        AVAILABLE: `${config.availabilityEmojis.AVAILABLE} Available Now`,
-        READY: `${config.availabilityEmojis.READY} Ready (In Voice)`,
-        DONE: `${config.availabilityEmojis.DONE} Sleeeep`,
+        AVAILABLE: `${config.availabilityEmojis.AVAILABLE} Red-e Now`,
+        READY: `${config.availabilityEmojis.READY} Red-e (In Voice)`,
+        DONE: `${config.availabilityEmojis.DONE} Sleep-e`,
     }[status.availability] ?? `${config.availabilityEmojis.UNKNOWN} Unknown`;
 }
 

@@ -77,7 +77,7 @@ export default {
 async function handleList(client: RedEClient, interaction: ChatInputCommandInteraction<"cached" | "raw">) {
     const { channelId, guildId } = interaction;
     try {
-        const files = fs.readdirSync(`../logs/messages/${guildId}/${channelId}`);
+        const files = fs.readdirSync(`../logs/messages/${guildId}/${channelId}`).reverse();
         if (files.length == 0) {
             throw "No files";
         }
