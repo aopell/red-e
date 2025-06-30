@@ -19,8 +19,8 @@ export default class ClientState {
 
     static load() {
         let json = new ClientState();
-        if (fs.existsSync("state.json")) {
-            json = <ClientState>JSON.parse(fs.readFileSync("state.json").toString());
+        if (fs.existsSync("../state.json")) {
+            json = <ClientState>JSON.parse(fs.readFileSync("../state.json").toString());
         }
 
         return new ClientState(
@@ -31,7 +31,7 @@ export default class ClientState {
 
     save() {
         const json = JSON.stringify(this, null, 4);
-        fs.writeFileSync("state.json", json);
+        fs.writeFileSync("../state.json", json);
     }
 
     /**
@@ -56,8 +56,8 @@ export default class ClientState {
 
         const existing = this.EMessages[guildId][channelId];
         if (!emessage && existing) {
-            fs.mkdirSync(`logs/messages/${guildId}/${channelId}`, { recursive: true });
-            fs.writeFileSync(`logs/messages/${guildId}/${channelId}/${existing.creationTimestamp}.json`, JSON.stringify(existing));
+            fs.mkdirSync(`../logs/messages/${guildId}/${channelId}`, { recursive: true });
+            fs.writeFileSync(`../logs/messages/${guildId}/${channelId}/${existing.creationTimestamp}.json`, JSON.stringify(existing));
         }
 
         this.EMessages[guildId][channelId] = emessage;

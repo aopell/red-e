@@ -77,7 +77,7 @@ export default {
 async function handleList(client: RedEClient, interaction: ChatInputCommandInteraction<"cached" | "raw">) {
     const { channelId, guildId } = interaction;
     try {
-        const files = fs.readdirSync(`logs/messages/${guildId}/${channelId}`);
+        const files = fs.readdirSync(`../logs/messages/${guildId}/${channelId}`);
         if (files.length == 0) {
             throw "No files";
         }
@@ -119,12 +119,12 @@ async function handleView(client: RedEClient, interaction: ChatInputCommandInter
     if (filename.includes("/")) {
         interaction.reply({ content: `${EmojiText.X_MARK} File name cannot contain \`/\`.`, ephemeral: true });
         return;
-    } else if (!fs.existsSync(`logs/messages/${guildId}/${channelId}/${filename}`)) {
+    } else if (!fs.existsSync(`../logs/messages/${guildId}/${channelId}/${filename}`)) {
         interaction.reply({ content: `${EmojiText.X_MARK} That file does not exist.`, ephemeral: true });
         return;
     }
 
-    const json = JSON.parse(fs.readFileSync(`logs/messages/${guildId}/${channelId}/${filename}`).toString());
+    const json = JSON.parse(fs.readFileSync(`../logs/messages/${guildId}/${channelId}/${filename}`).toString());
 
     interaction.reply({ files: [new AttachmentBuilder(Buffer.from(JSON.stringify(json, null, 4)), { name: filename })], ephemeral: true });
 }
@@ -140,12 +140,12 @@ async function handleChart(client: RedEClient, interaction: ChatInputCommandInte
     if (filename.includes("/")) {
         interaction.reply({ content: `${EmojiText.X_MARK} File name cannot contain \`/\`.`, ephemeral: true });
         return;
-    } else if (!fs.existsSync(`logs/messages/${guildId}/${channelId}/${filename}`)) {
+    } else if (!fs.existsSync(`../logs/messages/${guildId}/${channelId}/${filename}`)) {
         interaction.reply({ content: `${EmojiText.X_MARK} That file does not exist.`, ephemeral: true });
         return;
     }
 
-    const filePath = `logs/messages/${guildId}/${channelId}/${filename}`;
+    const filePath = `../logs/messages/${guildId}/${channelId}/${filename}`;
     const json = JSON.parse(fs.readFileSync(filePath).toString());
 
     const ephemeral = interaction.options.getBoolean("ephemeral") ?? false;

@@ -1,6 +1,6 @@
 import { updateMessages } from "../update-messages";
 import type { RedEClient } from "../typedefs";
-import { deployGlobalCommands } from "../deploy-commands";
+import { deployGlobalCommands, deleteAllGlobalCommands, deleteAllGuildCommands, deployGuildCommands } from "../deploy-commands";
 
 export default {
     name: "ready",
@@ -8,9 +8,12 @@ export default {
     async execute(client: RedEClient) {
         console.log(`Ready! Logged in as ${client.user?.tag}`);
 
-        await deployGlobalCommands(client);
+        await deleteAllGuildCommands(client, "136711405356318721");
+        // await deployGuildCommands(client, "136711405356318721");
 
-        updateMessages(client);
-        setInterval(() => updateMessages(client), 60000);
+        // await deployGlobalCommands(client);
+
+        // updateMessages(client);
+        // setInterval(() => updateMessages(client), 60000);
     },
 };
