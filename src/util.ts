@@ -21,12 +21,12 @@ type AvailabilityColorLevel = Exclude<AvailabilityLevel | "LATE", AvailabilityLe
 
 export const AvailabilityColors: Record<AvailabilityColorLevel, number> = {
     UNKNOWN: 0x7a7a7a,
-    UNAVAILABLE: 0xef5a73,
-    MAYBE: 0xffac33,
-    AVAILABLE: 0x226699,
-    READY: 0x2cd261,
-    DONE: 0x9241d4,
-    LATE: 0xFF7939,
+    UNAVAILABLE: 0xdb372d,
+    MAYBE: 0xff9e1f,
+    AVAILABLE: 0x128937,
+    READY: 0x009ebb,
+    DONE: 0x400b84,
+    LATE: 0xff580a,
 } as const;
 
 export enum EmojiKeys {
@@ -115,9 +115,9 @@ export function getStatusMessage(config: Config, status: EStatus): string {
     function getAvailableLaterStatus() {
         if (!status.timeAvailable) return `${config.availabilityEmojis.UNKNOWN} Unknown`;
         if (status.timeAvailable > Date.now()) {
-            return `${new Date().getMinutes() % 2 == 0 ? config.availabilityEmojis.AVAILABLE_LATER : config.availabilityEmojis.AVAILABLE_LATER_ALT} Available ${discordTimestamp(status.timeAvailable, TimestampFlags.RELATIVE)}`;
+            return `${new Date().getMinutes() % 2 == 0 ? config.availabilityEmojis.AVAILABLE_LATER : config.availabilityEmojis.AVAILABLE_LATER_ALT} Available ${discordTimestamp(status.timeAvailable, TimestampFlags.RELATIVE)} (${discordTimestamp(status.timeAvailable, TimestampFlags.SHORT_TIME)})`;
         }
-        return `${config.availabilityEmojis.LATE} Late as of ${discordTimestamp(status.timeAvailable, TimestampFlags.RELATIVE)}`;
+        return `${config.availabilityEmojis.LATE} Late as of ${discordTimestamp(status.timeAvailable, TimestampFlags.RELATIVE)} (${discordTimestamp(status.timeAvailable, TimestampFlags.SHORT_TIME)})`;
     }
 
     return {
@@ -125,7 +125,7 @@ export function getStatusMessage(config: Config, status: EStatus): string {
         UNAVAILABLE: `${config.availabilityEmojis.UNAVAILABLE} No availabilit-e`,
         MAYBE: `${config.availabilityEmojis.MAYBE} Mayb-e Later`,
         AVAILABLE_LATER: getAvailableLaterStatus(),
-        AVAILABLE: `${config.availabilityEmojis.AVAILABLE} Red-e Now`,
+        AVAILABLE: `${config.availabilityEmojis.AVAILABLE} Red-e Now (as of ${discordTimestamp(status.creationTimestamp, TimestampFlags.RELATIVE)})`,
         READY: `${config.availabilityEmojis.READY} Red-e (In Voice)`,
         DONE: `${config.availabilityEmojis.DONE} Sleep-e`,
     }[status.availability] ?? `${config.availabilityEmojis.UNKNOWN} Unknown`;

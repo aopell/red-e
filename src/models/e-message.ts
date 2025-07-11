@@ -192,12 +192,8 @@ export default class EMessage {
      * @param removeControls Whether to remove controls from this message
      */
     async toMessage(client: RedEClient, removeControls = false) {
-        const user = await getGuildMemberOrUser(client, this.guildId, this.creatorId);
-        const ownerAvatar = client.config?.avatoji?.[this.creatorId] ?? client.config?.avatoji?.default ?? "❓";
-
         const embed = new EmbedBuilder()
-            .setTitle("Are you red-e?")
-            .setDescription(`${ownerAvatar} <@${user.id}> proposed we be red-e${this.proposedTime ? " " + discordTimestamp(this.proposedTime, TimestampFlags.RELATIVE) : ""}`);
+            .setTitle("Are you red-e?");
 
         const currentStatuses: EStatus[] = [];
         for (const userId in this.statuses) {
