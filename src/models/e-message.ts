@@ -193,7 +193,8 @@ export default class EMessage {
      */
     async toMessage(client: RedEClient, removeControls = false) {
         const embed = new EmbedBuilder()
-            .setTitle("Are you red-e?");
+            .setTitle("Are you red-e?")
+            .setDescription("");
 
         const currentStatuses: EStatus[] = [];
         for (const userId in this.statuses) {
