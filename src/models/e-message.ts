@@ -15,6 +15,7 @@ export default class EMessage {
     statuses: Record<string, number>;
     creationTimestamp: number;
     lastUpdated: number;
+    autoMentions: number;
 
     /**
      * Creates a new `EMessage`
@@ -32,6 +33,7 @@ export default class EMessage {
         this.statuses = { [creatorId]: 0 };
         this.creationTimestamp = Date.now();
         this.lastUpdated = Date.now();
+        this.autoMentions = 0;
     }
 
     /**
@@ -45,6 +47,7 @@ export default class EMessage {
         emessage.statuses = obj.statuses;
         emessage.creationTimestamp = obj.creationTimestamp;
         emessage.lastUpdated = obj.lastUpdated;
+        emessage.autoMentions = obj.autoMentions;
         return emessage;
     }
 
@@ -162,6 +165,52 @@ export default class EMessage {
                     console.warn(`Couldn't send reminder message to ${this.channelId}: Not a text channel`);
                 }
             }
+        }
+
+        client.state.setEMessage(this.guildId, this.channelId, this);
+    }
+
+    // Auto mentions should mention the availability role if everyone has responded ready but nobody is in voice yet
+
+    async handleAutoMentions(client: RedEClient) {
+        if (this.statuses.length < 2) return; // Don't ping if only one person is in the message
+        if (client.config.autoMentions.length <= this.autoMentions) return; // Don't ping if we've already pinged the max number of times
+
+        let availableUsers = 0;
+        let qualifiedUsers = 0;
+
+        let nextReminderMinutes = client.config.autoMentions[this.autoMentions];
+
+        for (const userId in this.statuses) {
+            const status = this.getStatus(userId);
+
+            switch (status?.availability) {
+                case AvailabilityLevel.AVAILABLE:
+                    qualifiedUsers++;
+                    if (status.timeAvailable && (status.timeAvailable + (nextReminderMinutes * TimeUnit.MINUTES)) < Date.now()) {
+                        // User has been available for longer than the next reminder time
+                        availableUsers++;
+                    }
+                    break;
+                case AvailabilityLevel.AVAILABLE_LATER:
+                    // Reset auto mentions if someone is available later
+                    this.autoMentions = 0;
+                    qualifiedUsers++;
+                    break;
+                case AvailabilityLevel.READY:
+                    qualifiedUsers++;
+                    break;
+                case AvailabilityLevel.MAYBE:
+                case AvailabilityLevel.UNKNOWN:
+                case AvailabilityLevel.DONE:
+                case AvailabilityLevel.UNAVAILABLE:
+                    continue;
+            }
+        }
+
+        if (availableUsers === qualifiedUsers && availableUsers > 1) {
+            const availabilityRole = client.state.getGuildPreference(this.guildId, "availabilityRole", null);
+            if (!availabilityRole) return;
         }
 
         client.state.setEMessage(this.guildId, this.channelId, this);

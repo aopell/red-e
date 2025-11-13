@@ -33,6 +33,10 @@
         5,
         15
     ],
+    "autoMentions": [
+        5,
+        15
+    ],
     "lateMessages": [
         "{@}, liar.",
         "{@}, we're waiting",
@@ -40,6 +44,8 @@
         "{@}, could you be any slower?",
         "{@}, what's taking you so long?",
         "{@}, hurry up!",
-        "{@}, get in here!"
+        "{@}, get in here!",
+        "{@}, gee whiz! What's taking you so long?",
+        "{@}, crikey, mate! Could you be any slower?"
     ]
 }

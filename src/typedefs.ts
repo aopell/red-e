@@ -13,6 +13,7 @@ export type Config = {
     defaultTimezone: string,
     expirationHours: number,
     latePings: number[],
+    autoMentions: number[],
     lateMessages: string[]
 };
 
