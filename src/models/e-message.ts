@@ -66,6 +66,22 @@ export default class EMessage {
     }
 
     /**
+     * Counts the number of users with a given status
+     * @param status The status to count
+     * @returns The number of users with the given status
+     */
+    countWithStatus(status: AvailabilityLevel): number {
+        let count = 0;
+        for (const userId in this.statuses) {
+            const s = this.getStatus(userId);
+            if (s && s.availability === status) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
      * Updates the status for the provided user with the given status
      * @param client The bot client
      * @param userId ID of the user whose status to update

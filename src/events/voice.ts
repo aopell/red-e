@@ -2,7 +2,7 @@ import EStatus from "../models/e-status";
 import { AvailabilityLevel } from "../util";
 
 import type { RedEClient } from "../typedefs";
-import type { VoiceState } from "discord.js";
+import { TextChannel, type VoiceState } from "discord.js";
 
 export default {
     name: "voiceStateUpdate",
@@ -29,6 +29,23 @@ export default {
         } else if (newTracked) {
             // joining channel
             for (const emessage of guildEMessages) {
+                const userStatus = emessage.getStatus(userId);
+                const channel = await client.channels.fetch(emessage.channelId);
+                switch (userStatus?.availability ?? AvailabilityLevel.UNAVAILABLE) {
+                    case AvailabilityLevel.AVAILABLE:
+                    case AvailabilityLevel.AVAILABLE_LATER:
+                    case AvailabilityLevel.MAYBE:
+                    case AvailabilityLevel.UNKNOWN:
+                        // send a message to the channel
+                        if (channel instanceof TextChannel) {
+                            // if (emessage.countWithStatus(AvailabilityLevel.READY) >= 0) break;
+                            channel.send(`:loud_sound: <@${userId}> has joined <#${newChannel}>`);
+                        }
+                        break;
+                    default:
+                        break;
+                }
+
                 emessage.updateStatus(client, userId, new EStatus(userId, AvailabilityLevel.READY), false);
                 emessage.updateAllMessages(client);
             }
