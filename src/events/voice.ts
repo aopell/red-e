@@ -31,6 +31,7 @@ export default {
             for (const emessage of guildEMessages) {
                 const userStatus = emessage.getStatus(userId);
                 const channel = await client.channels.fetch(emessage.channelId);
+                const availabilityRole = client.state.getGuildPreference(emessage.guildId, "availabilityRole", null);
                 switch (userStatus?.availability ?? AvailabilityLevel.UNAVAILABLE) {
                     case AvailabilityLevel.AVAILABLE:
                     case AvailabilityLevel.AVAILABLE_LATER:
@@ -38,8 +39,12 @@ export default {
                     case AvailabilityLevel.UNKNOWN:
                         // send a message to the channel
                         if (channel instanceof TextChannel) {
-                            // if (emessage.countWithStatus(AvailabilityLevel.READY) >= 0) break;
-                            channel.send(`:loud_sound: <@${userId}> has joined <#${newChannel}>`);
+                            if (emessage.countWithStatus(AvailabilityLevel.READY) >= 0) break;
+                            if (availabilityRole) {
+                                channel.send(`:loud_sound: <@${userId}> has joined <#${newChannel}> <@&${availabilityRole}>`);
+                            } else {
+                                channel.send(`:loud_sound: <@${userId}> has joined <#${newChannel}>`);
+                            }
                         }
                         break;
                     default:
