@@ -39,7 +39,7 @@ export default {
                     case AvailabilityLevel.UNKNOWN:
                         // send a message to the channel
                         if (channel instanceof TextChannel) {
-                            if (emessage.countWithStatus(AvailabilityLevel.READY) >= 0) break;
+                            if (emessage.countWithStatus(AvailabilityLevel.READY) > 0) break;
                             if (availabilityRole) {
                                 channel.send(`:loud_sound: <@${userId}> has joined <#${newChannel}> <@&${availabilityRole}>`);
                             } else {
